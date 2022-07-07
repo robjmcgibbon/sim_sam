@@ -6,7 +6,6 @@ attrs==21.4.0
 backcall==0.2.0
 beautifulsoup4==4.11.1
 bleach==5.0.0
-certifi @ file:///opt/conda/conda-bld/certifi_1655968806487/work/certifi
 cffi==1.15.0
 cramjam==2.5.0
 cycler==0.11.0
@@ -16,7 +15,6 @@ defusedxml==0.7.1
 entrypoints==0.4
 executing==0.8.3
 fastjsonschema==2.15.3
-fastparquet==0.8.1
 fonttools==4.33.3
 fsspec==2022.5.0
 h5py==3.7.0
@@ -45,7 +43,7 @@ nest-asyncio==1.5.5
 notebook==6.4.12
 numpy==1.23.0
 packaging==21.3
-pandas==1.4.3
+pandas==1.2.5
 pandocfilters==1.5.0
 parso==0.8.3
 pexpect==4.8.0
