@@ -1,9 +1,15 @@
 # Lifted from https://github.com/illustristng/illustris_python
 import os
+import datetime
 import six
 
 import numpy as np
 import h5py
+
+
+def log(*message):
+    time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(time, *message)
 
 
 def gcPath(basePath, snapNum, chunkNum=0):

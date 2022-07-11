@@ -10,7 +10,13 @@
 
 - Get data from Mitchell paper (he has left academia)
 - Calculate outflows for TNG
-- Include accreted stellar mass
+- Separate hot and cold mode accretion
+- Include negative accretion in mode (Neistein sec 3.1)
+- Could switch to a one phase model (Neistein sec 5)
+
+### Problems
+- What happens when cells split?
+- Mass flows into and out of cells
 
 ### Meeting - 6/7/22
 
@@ -18,7 +24,7 @@
 - Early results (and results from Neistein paper) show that $f_c$ decreases with redshift. This is probably because of Figure 5 in [this paper](https://arxiv.org/abs/0808.0553) about cold mode accretion. At high redshift cold mode accretion occurs which gets cold gas into halos. Also at higher redshift the halos have lower mass on average, so the virial temperature is lower.
 
 ### Technical notes
-- There is [an issue](https://github.com/conda/conda/issues/11580) with pip freeze
+- There is [an issue with pip freeze](https://github.com/conda/conda/issues/11580)
 - Pandas > 1.2 does not work on the fcfs nodes (Illegal Instruction)
 
 
