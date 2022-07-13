@@ -1,5 +1,4 @@
 import os
-import socket
 
 import h5py
 import matplotlib.pyplot as plt
@@ -7,15 +6,9 @@ import numpy as np
 
 import helpers
 
-snap = 99
-sim = 'tng100-3'
-
-if socket.gethostname() == 'lenovo-p52':
-    base_dir = '/home/rmcg/data/'
-else:
-    base_dir = '/disk01/rmcg/'
-sim_dir = f'{base_dir}downloaded/tng/{sim}/'
-gc_dir = f'{sim_dir}fof_subfind_snapshot_{snap}/'
+config = helpers.Config()
+h = config.get_hubble_param()
+gc_dir = config.get_gc_dir()
 
 dm_mass = np.array([], dtype='float32')
 stellar_mass = np.array([], dtype='float32')
@@ -23,7 +16,6 @@ fof_id = np.array([], dtype='int32')
 central_id = np.array([], dtype='int32')
 for file_name in sorted(os.listdir(gc_dir)):
     with h5py.File(gc_dir+file_name) as file:
-        h = file['Header'].attrs['HubbleParam']
         box_size = file['Header'].attrs['BoxSize'] / (1000 * h)
 
         mass = np.array(file['Subhalo/SubhaloMassType']) * (10**10) / h
@@ -72,5 +64,5 @@ axs[1].set_xlabel('$\log_{10}\, M_{DM}$  $[\mathrm{M}_\odot]$')
 axs[1].set_ylabel(ylabel)
 
 plt.tight_layout()
-plt.show()
-
+plt.savefig('/home/rmcg/ss_mass_function.png', dpi=300)
+plt.close()

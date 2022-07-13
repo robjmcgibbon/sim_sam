@@ -1,5 +1,4 @@
 import os
-import socket
 
 import h5py
 import matplotlib.pyplot as plt
@@ -7,18 +6,16 @@ import numpy as np
 
 import helpers
 
-snaps = [50, 99]
-sim = 'tng100-3'
-
-if socket.gethostname() == 'lenovo-p52':
-    base_dir = '/home/rmcg/data/'
-else:
-    base_dir = '/disk01/rmcg/'
-sim_dir = f'{base_dir}downloaded/tng/{sim}/'
-
 # Early results indicate that f_a decreases with z
 # At higher z halos that merge have lower mass
 # From this script low mass halos have a lower baryon fraction
+
+# As this script needs a range of snapshots, I set config.snap multiple times
+snaps = [50, 99]
+config = helpers.Config()
+h = config.get_hubble_param()
+omega_m = config.get_omega_m()
+omega_b = config.get_omega_b()
 
 bin_width = .5
 bins = np.arange(10, 15, bin_width)
@@ -26,7 +23,8 @@ mids = (bins[:-1] + bins[1:]) / 2
 n_bins = mids.shape[0]
 fig, ax = plt.subplots(1)
 for snap in snaps:
-    gc_dir = f'{sim_dir}fof_subfind_snapshot_{snap}/'
+    config.snap = snap
+    gc_dir = config.get_gc_dir()
 
     bh_mass = np.array([], dtype='float32')
     dm_mass = np.array([], dtype='float32')
@@ -37,10 +35,6 @@ for snap in snaps:
     for file_name in sorted(os.listdir(gc_dir)):
         print(file_name)
         with h5py.File(gc_dir+file_name) as file:
-            h = file['Header'].attrs['HubbleParam']
-            box_size = file['Header'].attrs['BoxSize'] / (1000 * h)
-            omega_m = file['Header'].attrs['Omega0']
-            omega_b = 0.0486
             z = round(file['Header'].attrs['Redshift'])
 
             mass = np.array(file['Subhalo/SubhaloMassType']) * (10**10) / h
@@ -65,6 +59,9 @@ for snap in snaps:
 universal_baryon_fraction = omega_b / (omega_m - omega_b)
 ax.axhline(universal_baryon_fraction, ls='--', color='gray', 
         label=r'$\frac{\Omega_b}{\Omega_m-\Omega_b}$')
+ax.set_xlabel('$\log_{10}\, M_{DM}$  $[\mathrm{M}_\odot]$')
+ax.set_ylabel('($M_{BH}+M_{Gas}+M_{*}$) / $M_{DM}$')
 ax.legend()
-plt.show()
 
+plt.savefig('/home/rmcg/ss_baryon_fraction.png', dpi=300)
+plt.close()

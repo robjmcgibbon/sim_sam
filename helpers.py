@@ -1,7 +1,8 @@
-# Lifted from https://github.com/illustristng/illustris_python
+# Lots was lifted from https://github.com/illustristng/illustris_python
+import argparse
 import os
 import datetime
-import six
+import socket
 
 import numpy as np
 import h5py
@@ -12,250 +13,324 @@ def log(*message):
     print(time, *message)
 
 
-def gcPath(basePath, snapNum, chunkNum=0):
-    """ Return absolute path to a group catalog file (modify as needed). """
-    gcPath = f'{basePath}fof_subfind_snapshot_{snapNum}/'
-    filePath1 = gcPath + 'groups_%03d.%d.hdf5' % (snapNum, chunkNum)
-    filePath2 = gcPath + 'fof_subhalo_tab_%03d.%d.hdf5' % (snapNum, chunkNum)
+class Config:
+    def __init__(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--box_size', type=int, default=100)
+        parser.add_argument('--run', type=int, default=3)
+        parser.add_argument('--sim', type=str, default='tng')
+        parser.add_argument('--snap', type=int, default=99)
+        parser, unknown = parser.parse_known_args()
+        if unknown:
+            log(f'Unknown arguments: {unknown}')
+        parser = vars(parser)
 
-    if os.path.isfile(filePath1):
-        return filePath1
-    return filePath2
+        self.box_size = parser['box_size']
+        self.run = parser['run']
+        self.sim = parser['sim']
+        self.snap = parser['snap']
 
-def offsetPath(basePath, snapNum):
-    """ Return absolute path to a separate offset file (modify as needed). """
-    offsetPath = f'{basePath}offsets/offsets_{snapNum:03d}.hdf5'
-    return offsetPath
-
-def snapPath(basePath, snapNum, chunkNum=0):
-    """ Return absolute path to a snapshot HDF5 file (modify as needed). """
-    snapPath = f'{basePath}snapshot_{snapNum}/'
-    filePath = snapPath + 'snap_' + str(snapNum).zfill(3)
-    filePath += '.' + str(chunkNum) + '.hdf5'
-    return filePath
-
-
-def partTypeNum(partType):
-    """ Mapping between common names and numeric particle types. """
-    if str(partType).isdigit():
-        return int(partType)
-        
-    if str(partType).lower() in ['gas','cells']:
-        return 0
-    if str(partType).lower() in ['dm','darkmatter']:
-        return 1
-    if str(partType).lower() in ['dmlowres']:
-        return 2 # only zoom simulations, not present in full periodic boxes
-    if str(partType).lower() in ['tracer','tracers','tracermc','trmc']:
-        return 3
-    if str(partType).lower() in ['star','stars','stellar']:
-        return 4 # only those with GFM_StellarFormationTime>0
-    if str(partType).lower() in ['wind']:
-        return 4 # only those with GFM_StellarFormationTime<0
-    if str(partType).lower() in ['bh','bhs','blackhole','blackholes']:
-        return 5
-    
-    raise Exception("Unknown particle type name.")
-
-
-def getNumPart(header):
-    """ Calculate number of particles of all types given a snapshot header. """
-    nTypes = 6
-
-    nPart = np.zeros(nTypes, dtype=np.int64)
-    for j in range(nTypes):
-        nPart[j] = header['NumPart_Total'][j] | (header['NumPart_Total_HighWord'][j] << 32)
-
-    return nPart
-
-
-def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
-    """ Load a subset of fields for all particles/cells of a given partType.
-        If offset and length specified, load only that subset of the partType.
-        If mdi is specified, must be a list of integers of the same length as fields,
-        giving for each field the multi-dimensional index (on the second dimension) to load.
-          For example, fields=['Coordinates', 'Masses'] and mdi=[1, None] returns a 1D array
-          of y-Coordinates only, together with Masses.
-        If sq is True, return a numpy array instead of a dict if len(fields)==1.
-        If float32 is True, load any float64 datatype arrays directly as float32 (save memory). """
-    result = {}
-
-    ptNum = partTypeNum(partType)
-    gName = "PartType" + str(ptNum)
-
-    # make sure fields is not a single element
-    if isinstance(fields, six.string_types):
-        fields = [fields]
-
-    # load header from first chunk
-    with h5py.File(snapPath(basePath, snapNum), 'r') as f:
-
-        header = dict(f['Header'].attrs.items())
-        nPart = getNumPart(header)
-
-        # decide global read size, starting file chunk, and starting file chunk offset
-        if subset:
-            offsetsThisType = subset['offsetType'][ptNum] - subset['snapOffsets'][ptNum, :]
-
-            fileNum = np.max(np.where(offsetsThisType >= 0))
-            fileOff = offsetsThisType[fileNum]
-            numToRead = subset['lenType'][ptNum]
+        self.name = f'{self.sim}{self.box_size}-{self.run}'
+        hostname = socket.gethostname()
+        if hostname == 'lenovo-p52':
+            self.hostname = 'local'
+        elif (hostname == 'cuillin') or ('worker' in hostname) or ('fcfs' in hostname):
+            self.hostname = 'cuillin'
         else:
-            fileNum = 0
-            fileOff = 0
-            numToRead = nPart[ptNum]
+            self.hostname = 'tng'
 
-        result['count'] = numToRead
+    def get_hubble_param(self):
+        if self.sim == 'tng':
+            return 0.6774
+        raise AssertionError
 
-        if not numToRead:
-            # print('warning: no particles of requested type, empty return.')
-            return result
+    def get_omega_m(self):
+        if self.sim == 'tng':
+            return 0.3089
 
-        # find a chunk with this particle type
-        i = 1
-        while gName not in f:
-            f = h5py.File(snapPath(basePath, snapNum, i), 'r')
-            i += 1
+    def get_omega_b(self):
+        if self.sim == 'tng':
+            return 0.0486
 
-        # if fields not specified, load everything
-        if not fields:
-            fields = list(f[gName].keys())
+    def get_base_dir(self):
+        if self.hostname == 'local':
+            return '/home/rmcg/data/'
+        elif self.hostname == 'cuillin':
+            return '/disk01/rmcg/'
+        elif self.hostname == 'tng':
+            return '/home/tnguser'
 
-        for i, field in enumerate(fields):
-            # verify existence
-            if field not in f[gName].keys():
-                raise Exception("Particle type ["+str(ptNum)+"] does not have field ["+field+"]")
+    def get_generated_data_dir(self):
+        data_dir = f'{self.get_base_dir()}generated/sim_sam/{self.name}/'
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+        return data_dir
 
-            # replace local length with global
-            shape = list(f[gName][field].shape)
-            shape[0] = numToRead
+    def get_lhalotree_dir(self):
+        assert self.hostname != 'tng'
+        return f'{self.get_base_dir()}downloaded/tng/{self.name}/merger_tree/lhalotree/'
 
-            # multi-dimensional index slice load
-            if mdi is not None and mdi[i] is not None:
-                if len(shape) != 2:
-                    raise Exception("Read error: mdi requested on non-2D field ["+field+"]")
-                shape = [shape[0]]
+    def get_gc_dir(self):
+        if self.hostname == 'tng':
+            assert self.sim == 'tng'
+            gc_dir = f'{self.get_base_dir()}sims.TNG/TNG{self.box_size}-{self.run}/'
+            gc_dir += f'output/groups_{self.snap:03d}/'
+        else:
+            gc_dir = f'{self.get_base_dir()}downloaded/tng/tng{self.box_size}-{self.run}/'
+            gc_dir += f'fof_subfind_snapshot_{self.snap}/'
+        return gc_dir
 
-            # allocate within return dict
-            dtype = f[gName][field].dtype
-            if dtype == np.float64 and float32: dtype = np.float32
-            result[field] = np.zeros(shape, dtype=dtype)
+    def gcPath(self, chunkNum=0):
+        """ Return absolute path to a group catalog file (modify as needed). """
+        filePath1 = self.get_gc_dir() + 'groups_%03d.%d.hdf5' % (self.snap, chunkNum)
+        filePath2 = self.get_gc_dir() + 'fof_subhalo_tab_%03d.%d.hdf5' % (self.snap, chunkNum)
 
-    # loop over chunks
-    wOffset = 0
-    origNumToRead = numToRead
+        if os.path.isfile(filePath1):
+            return filePath1
+        return filePath2
 
-    while numToRead:
-        f = h5py.File(snapPath(basePath, snapNum, fileNum), 'r')
+    def offsetPath(self):
+        """ Return absolute path to a separate offset file (modify as needed). """
+        if self.hostname == 'tng':
+            assert self.sim == 'tng'
+            offsetPath = f'{self.get_base_dir()}sims.TNG/TNG{self.box_size}-{self.run}/'
+            offsetPath += f'postprocessing/offsets/offsets_{self.snap:03d}/'
+        else:
+            offsetPath = f'{self.get_base_dir()}downloaded/tng/tng{self.box_size}-{self.run}/'
+            offsetPath += f'offsets/offsets_{self.snap:03d}.hdf5'
+        return offsetPath
 
-        # no particles of requested type in this file chunk?
-        if gName not in f:
-            f.close()
-            fileNum += 1
-            fileOff  = 0
-            continue
+    def snapPath(self, chunkNum=0):
+        """ Return absolute path to a snapshot HDF5 file (modify as needed). """
+        if self.hostname == 'tng':
+            assert self.sim == 'tng'
+            snapPath = f'{self.get_base_dir()}sims.TNG/TNG{self.box_size}-{self.run}/'
+            snapPath += f'output/snapdir_{self.snap:03d}/'
+        else:
+            snapPath = f'{self.get_base_dir()}downloaded/tng/tng{self.box_size}-{self.run}/'
+            snapPath += f'snapshot_{self.snap}/'
+        filePath = snapPath + 'snap_' + str(self.snap).zfill(3)
+        filePath += '.' + str(chunkNum) + '.hdf5'
+        return filePath
 
-        # set local read length for this file chunk, truncate to be within the local size
-        numTypeLocal = f['Header'].attrs['NumPart_ThisFile'][ptNum]
+    @staticmethod
+    def partTypeNum(partType):
+        """ Mapping between common names and numeric particle types. """
+        if str(partType).isdigit():
+            return int(partType)
 
-        numToReadLocal = numToRead
+        if str(partType).lower() in ['gas','cells']:
+            return 0
+        if str(partType).lower() in ['dm','darkmatter']:
+            return 1
+        if str(partType).lower() in ['dmlowres']:
+            return 2 # only zoom simulations, not present in full periodic boxes
+        if str(partType).lower() in ['tracer','tracers','tracermc','trmc']:
+            return 3
+        if str(partType).lower() in ['star','stars','stellar']:
+            return 4 # only those with GFM_StellarFormationTime>0
+        if str(partType).lower() in ['wind']:
+            return 4 # only those with GFM_StellarFormationTime<0
+        if str(partType).lower() in ['bh','bhs','blackhole','blackholes']:
+            return 5
 
-        if fileOff + numToReadLocal > numTypeLocal:
-            numToReadLocal = numTypeLocal - fileOff
+        raise Exception("Unknown particle type name.")
 
-        #print('['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
-        #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal))
+    @staticmethod
+    def getNumPart(header):
+        """ Calculate number of particles of all types given a snapshot header. """
+        nTypes = 6
 
-        # loop over each requested field for this particle type
-        for i, field in enumerate(fields):
-            # read data local to the current file
-            if mdi is None or mdi[i] is None:
-                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal]
+        nPart = np.zeros(nTypes, dtype=np.int64)
+        for j in range(nTypes):
+            nPart[j] = header['NumPart_Total'][j] | (header['NumPart_Total_HighWord'][j] << 32)
+
+        return nPart
+
+    def loadSubset(self, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
+        """ Load a subset of fields for all particles/cells of a given partType.
+            If offset and length specified, load only that subset of the partType.
+            If mdi is specified, must be a list of integers of the same length as fields,
+            giving for each field the multi-dimensional index (on the second dimension) to load.
+              For example, fields=['Coordinates', 'Masses'] and mdi=[1, None] returns a 1D array
+              of y-Coordinates only, together with Masses.
+            If sq is True, return a numpy array instead of a dict if len(fields)==1.
+            If float32 is True, load any float64 datatype arrays directly as float32 (save memory). """
+        result = {}
+
+        ptNum = self.partTypeNum(partType)
+        gName = "PartType" + str(ptNum)
+
+        # make sure fields is not a single element
+        if isinstance(fields, str):
+            fields = [fields]
+
+        # load header from first chunk
+        with h5py.File(self.snapPath(self.snap), 'r') as f:
+
+            header = dict(f['Header'].attrs.items())
+            nPart = self.getNumPart(header)
+
+            # decide global read size, starting file chunk, and starting file chunk offset
+            if subset:
+                offsetsThisType = subset['offsetType'][ptNum] - subset['snapOffsets'][ptNum, :]
+
+                fileNum = np.max(np.where(offsetsThisType >= 0))
+                fileOff = offsetsThisType[fileNum]
+                numToRead = subset['lenType'][ptNum]
             else:
-                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal, mdi[i]]
+                fileNum = 0
+                fileOff = 0
+                numToRead = nPart[ptNum]
 
-        wOffset   += numToReadLocal
-        numToRead -= numToReadLocal
-        fileNum   += 1
-        fileOff    = 0  # start at beginning of all file chunks other than the first
+            result['count'] = numToRead
 
-        f.close()
+            if not numToRead:
+                # print('warning: no particles of requested type, empty return.')
+                return result
 
-    # verify we read the correct number
-    if origNumToRead != wOffset:
-        raise Exception("Read ["+str(wOffset)+"] particles, but was expecting ["+str(origNumToRead)+"]")
+            # find a chunk with this particle type
+            i = 1
+            while gName not in f:
+                f = h5py.File(self.snapPath(i), 'r')
+                i += 1
 
-    # only a single field? then return the array instead of a single item dict
-    if sq and len(fields) == 1:
-        return result[fields[0]]
+            # if fields not specified, load everything
+            if not fields:
+                fields = list(f[gName].keys())
 
-    return result
+            for i, field in enumerate(fields):
+                # verify existence
+                if field not in f[gName].keys():
+                    raise Exception("Particle type ["+str(ptNum)+"] does not have field ["+field+"]")
 
+                # replace local length with global
+                shape = list(f[gName][field].shape)
+                shape[0] = numToRead
 
-def getSnapOffsets(basePath, snapNum, id, type):
-    """ Compute offsets within snapshot for a particular group/subgroup. """
-    r = {}
+                # multi-dimensional index slice load
+                if mdi is not None and mdi[i] is not None:
+                    if len(shape) != 2:
+                        raise Exception("Read error: mdi requested on non-2D field ["+field+"]")
+                    shape = [shape[0]]
 
-    # old or new format
-    if 'fof_subhalo' in gcPath(basePath, snapNum):
-        # use separate 'offsets_nnn.hdf5' files
-        with h5py.File(offsetPath(basePath, snapNum), 'r') as f:
-            groupFileOffsets = f['FileOffsets/'+type][()]
-            r['snapOffsets'] = np.transpose(f['FileOffsets/SnapByType'][()])  # consistency
-    else:
-        # load groupcat chunk offsets from header of first file
-        with h5py.File(gcPath(basePath, snapNum), 'r') as f:
-            groupFileOffsets = f['Header'].attrs['FileOffsets_'+type]
-            r['snapOffsets'] = f['Header'].attrs['FileOffsets_Snap']
+                # allocate within return dict
+                dtype = f[gName][field].dtype
+                if dtype == np.float64 and float32: dtype = np.float32
+                result[field] = np.zeros(shape, dtype=dtype)
 
-    # calculate target groups file chunk which contains this id
-    groupFileOffsets = int(id) - groupFileOffsets
-    fileNum = np.max(np.where(groupFileOffsets >= 0))
-    groupOffset = groupFileOffsets[fileNum]
+        # loop over chunks
+        wOffset = 0
+        origNumToRead = numToRead
 
-    # load the length (by type) of this group/subgroup from the group catalog
-    with h5py.File(gcPath(basePath, snapNum, fileNum), 'r') as f:
-        r['lenType'] = f[type][type+'LenType'][groupOffset, :]
+        while numToRead:
+            f = h5py.File(self.snapPath(fileNum), 'r')
 
-    # old or new format: load the offset (by type) of this group/subgroup within the snapshot
-    if 'fof_subhalo' in gcPath(basePath, snapNum):
-        with h5py.File(offsetPath(basePath, snapNum), 'r') as f:
-            r['offsetType'] = f[type+'/SnapByType'][id, :]
-    else:
-        with h5py.File(gcPath(basePath, snapNum, fileNum), 'r') as f:
-            r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset, :]
+            # no particles of requested type in this file chunk?
+            if gName not in f:
+                f.close()
+                fileNum += 1
+                fileOff  = 0
+                continue
 
-    return r
+            # set local read length for this file chunk, truncate to be within the local size
+            numTypeLocal = f['Header'].attrs['NumPart_ThisFile'][ptNum]
 
+            numToReadLocal = numToRead
 
-def loadSubhalo(basePath, snapNum, id, partType, fields=None):
-    """ Load all particles/cells of one type for a specific subhalo
-        (optionally restricted to a subset fields). """
-    # load subhalo length, compute offset, call loadSubset
-    subset = getSnapOffsets(basePath, snapNum, id, "Subhalo")
-    return loadSubset(basePath, snapNum, partType, fields, subset=subset)
+            if fileOff + numToReadLocal > numTypeLocal:
+                numToReadLocal = numTypeLocal - fileOff
 
+            #print('['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
+            #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal))
 
-def loadHalo(basePath, snapNum, id, partType, fields=None):
-    """ Load all particles/cells of one type for a specific halo
-        (optionally restricted to a subset fields). """
-    # load halo length, compute offset, call loadSubset
-    subset = getSnapOffsets(basePath, snapNum, id, "Group")
-    return loadSubset(basePath, snapNum, partType, fields, subset=subset)
+            # loop over each requested field for this particle type
+            for i, field in enumerate(fields):
+                # read data local to the current file
+                if mdi is None or mdi[i] is None:
+                    result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal]
+                else:
+                    result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal, mdi[i]]
 
+            wOffset   += numToReadLocal
+            numToRead -= numToReadLocal
+            fileNum   += 1
+            fileOff    = 0  # start at beginning of all file chunks other than the first
 
-def get_tng_ages():
-    # Values taken from tng100-1 webpage
-    return np.array([0.179, 0.271, 0.37, 0.418, 0.475, 0.517, 0.547, 0.596,
-                     0.64, 0.687, 0.732, 0.764, 0.844, 0.932, 0.965, 1.036,
-                     1.112, 1.177, 1.282, 1.366, 1.466, 1.54, 1.689, 1.812,
-                     1.944, 2.145, 2.238, 2.384, 2.539, 2.685, 2.839, 2.981,
-                     3.129, 3.285, 3.447, 3.593, 3.744, 3.902, 4.038, 4.206,
-                     4.293, 4.502, 4.657, 4.816, 4.98, 5.115, 5.289, 5.431,
-                     5.577, 5.726, 5.878, 6.073, 6.193, 6.356, 6.522, 6.692,
-                     6.822, 6.998, 7.132, 7.314, 7.453, 7.642, 7.786, 7.932,
-                     8.079, 8.28, 8.432, 8.587, 8.743, 8.902, 9.062, 9.225,
-                     9.389, 9.556, 9.724, 9.837, 10.009, 10.182, 10.299, 10.535,
-                     10.654, 10.834, 11.016, 11.138, 11.323, 11.509, 11.635, 11.824,
-                     11.951, 12.143, 12.337, 12.467, 12.663, 12.795, 12.993, 13.127,
-                     13.328, 13.463, 13.667, 13.803])
+            f.close()
+
+        # verify we read the correct number
+        if origNumToRead != wOffset:
+            raise Exception("Read ["+str(wOffset)+"] particles, but was expecting ["+str(origNumToRead)+"]")
+
+        # only a single field? then return the array instead of a single item dict
+        if sq and len(fields) == 1:
+            return result[fields[0]]
+
+        return result
+
+    def getSnapOffsets(self, id, type):
+        """ Compute offsets within snapshot for a particular group/subgroup. """
+        r = {}
+
+        # old or new format
+        if 'fof_subhalo' in self.gcPath(self.snap):
+            # use separate 'offsets_nnn.hdf5' files
+            with h5py.File(self.offsetPath(), 'r') as f:
+                groupFileOffsets = f['FileOffsets/'+type][()]
+                r['snapOffsets'] = np.transpose(f['FileOffsets/SnapByType'][()])  # consistency
+        else:
+            # load groupcat chunk offsets from header of first file
+            with h5py.File(self.gcPath(self.snap), 'r') as f:
+                groupFileOffsets = f['Header'].attrs['FileOffsets_'+type]
+                r['snapOffsets'] = f['Header'].attrs['FileOffsets_Snap']
+
+        # calculate target groups file chunk which contains this id
+        groupFileOffsets = int(id) - groupFileOffsets
+        fileNum = np.max(np.where(groupFileOffsets >= 0))
+        groupOffset = groupFileOffsets[fileNum]
+
+        # load the length (by type) of this group/subgroup from the group catalog
+        with h5py.File(self.gcPath(fileNum), 'r') as f:
+            r['lenType'] = f[type][type+'LenType'][groupOffset, :]
+
+        # old or new format: load the offset (by type) of this group/subgroup within the snapshot
+        if 'fof_subhalo' in self.gcPath(self.snap):
+            with h5py.File(self.offsetPath(), 'r') as f:
+                r['offsetType'] = f[type+'/SnapByType'][id, :]
+        else:
+            with h5py.File(self.gcPath(fileNum), 'r') as f:
+                r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset, :]
+
+        return r
+
+    def loadSubhalo(self, id, partType, fields=None):
+        """ Load all particles/cells of one type for a specific subhalo
+            (optionally restricted to a subset fields). """
+        # load subhalo length, compute offset, call loadSubset
+        subset = self.getSnapOffsets(id, "Subhalo")
+        return self.loadSubset(partType, fields, subset=subset)
+
+    def loadHalo(self, id, partType, fields=None):
+        """ Load all particles/cells of one type for a specific halo
+            (optionally restricted to a subset fields). """
+        # load halo length, compute offset, call loadSubset
+        subset = self.getSnapOffsets(id, "Group")
+        return self.loadSubset(partType, fields, subset=subset)
+
+    def get_ages(self):
+        assert self.sim == 'tng'
+        # Values taken from tng100-1 webpage
+        return np.array([0.179, 0.271, 0.37, 0.418, 0.475, 0.517, 0.547, 0.596,
+                         0.64, 0.687, 0.732, 0.764, 0.844, 0.932, 0.965, 1.036,
+                         1.112, 1.177, 1.282, 1.366, 1.466, 1.54, 1.689, 1.812,
+                         1.944, 2.145, 2.238, 2.384, 2.539, 2.685, 2.839, 2.981,
+                         3.129, 3.285, 3.447, 3.593, 3.744, 3.902, 4.038, 4.206,
+                         4.293, 4.502, 4.657, 4.816, 4.98, 5.115, 5.289, 5.431,
+                         5.577, 5.726, 5.878, 6.073, 6.193, 6.356, 6.522, 6.692,
+                         6.822, 6.998, 7.132, 7.314, 7.453, 7.642, 7.786, 7.932,
+                         8.079, 8.28, 8.432, 8.587, 8.743, 8.902, 9.062, 9.225,
+                         9.389, 9.556, 9.724, 9.837, 10.009, 10.182, 10.299, 10.535,
+                         10.654, 10.834, 11.016, 11.138, 11.323, 11.509, 11.635, 11.824,
+                         11.951, 12.143, 12.337, 12.467, 12.663, 12.795, 12.993, 13.127,
+                         13.328, 13.463, 13.667, 13.803])
