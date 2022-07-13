@@ -1,13 +1,5 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import os
-import socket
 
-import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -15,128 +7,24 @@ import pandas as pd
 import helpers
 from helpers import log
 
+config = helpers.Config()
 
-# In[2]:
+log(f'Loading pair data')
+data = pd.read_parquet(f'{config.get_generated_data_dir()}pairs/snap_{config.snap}.parquet')
+n_sub = data.shape[0]
+data = {k: np.array(data[k]) for k in data.keys()}
 
+ages = config.get_ages()
 
-# TODO: pass these as arguments
-snap = 99
-sim = 'tng100-3'
-log(f'Extracting data for {sim} for snapshot {snap}')
+print(n_sub)
+exit()
 
-if socket.gethostname() == 'lenovo-p52':
-    base_dir = '/home/rmcg/data/'
-else:
-    base_dir = '/disk01/rmcg/'
-sim_dir = f'{base_dir}downloaded/tng/{sim}/'
-lhalotree_dir = sim_dir + 'merger_tree/lhalotree/'
-with h5py.File(lhalotree_dir+'trees_sf1_099.0.hdf5', 'r') as file:
-    redshifts = np.array(file['/Header/Redshifts'])
-scale_factors = 1 / (1 + redshifts)
-ages = helpers.get_tng_ages()
-
-
-# ## Finding valid subhalo pairs
-# <u> Problems </u>
-# - How to define a valid galaxy? Should I implement a stellar mass cut?
-# - Assert that diff_dm_mass is positive?
-
-# In[3]:
-
-
-# desc refers to a subhalo at snap
-# prog refers to progenitor subhalo at snap-1
-
-data = {}
-data['desc_id'] = np.array([], dtype='int32')
-data['prog_id'] = np.array([], dtype='int32')
-data['desc_stellar_mass'] = np.array([], dtype='float32')
-data['prog_stellar_mass'] = np.array([], dtype='float32')
-data['diff_dm_mass'] = np.array([], dtype='float32')
-#TODO: run for all files
-for file_name in os.listdir(lhalotree_dir)[:1]:
-    log(f'Processing {file_name}')
-    with h5py.File(lhalotree_dir+file_name, 'r') as file:
-        for tree_name in [key for key in file.keys() if 'Tree' in key]:
-            # TODO: Units
-            arr_sub_id = np.array(file[tree_name+'/SubhaloNumber'])
-            arr_gas_mass = np.array(file[tree_name+'/SubhaloMassType'][:, 0])
-            arr_dm_mass = np.array(file[tree_name+'/SubhaloMassType'][:, 1])
-            arr_stellar_mass = np.array(file[tree_name+'/SubhaloMassType'][:, 4])
-            arr_snap_num = np.array(file[tree_name+'/SnapNum'])
-            
-            arr_central_index = np.array(file[tree_name+'/FirstHaloInFOFGroup'])
-            arr_is_central = np.zeros(arr_sub_id.shape[0], dtype=bool)
-            for i_sub, i_central in enumerate(arr_central_index):
-                arr_is_central[i_sub] = (i_sub == i_central)
-                
-            arr_prog_index = np.array(file[tree_name+'/FirstProgenitor'])
-            arr_prog_id = -1 * np.ones(arr_sub_id.shape[0], dtype='int32')
-            arr_prog_dm_mass = np.zeros(arr_sub_id.shape[0], dtype='float32')
-            arr_prog_stellar_mass = np.zeros(arr_sub_id.shape[0], dtype='float32')
-            for i_desc, i_prog in enumerate(arr_prog_index.copy()):
-                if (
-                        i_prog != -1 and                      # Check progenitor exists
-                        arr_snap_num[i_prog] == snap - 1 and  # Check snapshot isn't skipped
-                        arr_is_central[i_prog] and            # Require central subhalo
-                        arr_stellar_mass[i_prog] != 0 and     # Require nonzero stellar mass
-                        arr_gas_mass[i_prog] != 0             # Require nonzero gas mass
-                    ):
-                    arr_prog_id[i_desc] = arr_sub_id[i_prog]
-                    arr_prog_dm_mass[i_desc] = arr_dm_mass[i_prog]
-                    arr_prog_stellar_mass[i_desc] = arr_stellar_mass[i_prog]
-
-            mask = (arr_snap_num == snap)
-            mask &= arr_is_central
-            mask &= (arr_prog_id != -1)
-            mask &= (arr_stellar_mass != 0)
-            mask &= (arr_gas_mass != 0)
-            
-            data['desc_id'] = np.concatenate([data['desc_id'], arr_sub_id[mask]])
-            data['prog_id'] = np.concatenate([data['prog_id'], arr_prog_id[mask]])
-            data['desc_stellar_mass'] = np.concatenate([data['desc_stellar_mass'], arr_stellar_mass[mask]])
-            data['prog_stellar_mass'] = np.concatenate([data['prog_stellar_mass'], arr_prog_stellar_mass[mask]])
-            diff_dm_mass = arr_dm_mass[mask] - arr_prog_dm_mass[mask]
-            diff_dm_mass[diff_dm_mass < 0] = 0
-            data['diff_dm_mass'] = np.concatenate([data['diff_dm_mass'], diff_dm_mass])
-            
-n_valid = data['desc_id'].shape[0]
-log(f'{n_valid} galaxies found')
-
-
-# <img src="papers/basic_picture.png"/>
-# 
-# 
-# ## Gas rates
-# - Use set operations based on particle IDs
-# - Calculating gas temp can be taken from [here](https://www.tng-project.org/data/forum/topic/338/cold-and-hot-gas/)
-# 
-# <u> Problems </u>
-# - What happens to particle IDs when gas cells split?
-# - Gas cells are different masses in prog and sub snapshots (average over both?)
-# - What to return for galaxies which have no cold gas?
-# 
-# 
-# ## Star rates
-# - Use GFM_StellarFormationTime to calculate number of stars formed
-# - $R_{->star}$ is the rate of stars than were accreted onto the galaxy in the past timestep
-# - $f_m = \frac{R_{->star}}{m_{star}}$ (m for merge)
-# 
-# <u> Problems </u>
-# - Stellar particles brought in through mergers aren't accounted for, may mean I underestimate stellar mass
-# - Stellar masses evolve over time
-# - Wind particles
-# - Stellar mass from particles is sometimes more than from subfind (only less by factor of 10^7)
-
-# In[16]:
-
-
-def calculate_efficiencies(snap, desc_id, prog_id, diff_dm_mass, 
+def calculate_efficiencies(snap, desc_id, prog_id, diff_dm_mass,
                            desc_stellar_mass, prog_stellar_mass):
     
     # Calculations using gas particles
     gas_fields = ['Masses', 'ParticleIDs', 'StarFormationRate']
-    
+
     prog_g = helpers.loadSubhalo(sim_dir, snap-1, prog_id, 0, fields=gas_fields)
     prog_is_cold_gas = prog_g['StarFormationRate'] > 0
     prog_is_hot_gas = np.logical_not(prog_is_cold_gas)
@@ -210,9 +98,6 @@ def calculate_efficiencies(snap, desc_id, prog_id, diff_dm_mass,
     f_m = rate_accrete_star / desc_stellar_mass
     
     return f_a, f_c, f_s, f_d, f_m
-
-
-# In[17]:
 
 
 log(f'Calculating efficiencies')

@@ -70,46 +70,46 @@ class Config:
         assert self.hostname != 'tng'
         return f'{self.get_base_dir()}downloaded/tng/{self.name}/merger_tree/lhalotree/'
 
-    def get_gc_dir(self):
+    def get_gc_dir(self, snap):
         if self.hostname == 'tng':
             assert self.sim == 'tng'
             gc_dir = f'{self.get_base_dir()}sims.TNG/TNG{self.box_size}-{self.run}/'
-            gc_dir += f'output/groups_{self.snap:03d}/'
+            gc_dir += f'output/groups_{snap:03d}/'
         else:
             gc_dir = f'{self.get_base_dir()}downloaded/tng/tng{self.box_size}-{self.run}/'
-            gc_dir += f'fof_subfind_snapshot_{self.snap}/'
+            gc_dir += f'fof_subfind_snapshot_{snap}/'
         return gc_dir
 
-    def gcPath(self, chunkNum=0):
+    def gcPath(self, snap, chunkNum=0):
         """ Return absolute path to a group catalog file (modify as needed). """
-        filePath1 = self.get_gc_dir() + 'groups_%03d.%d.hdf5' % (self.snap, chunkNum)
-        filePath2 = self.get_gc_dir() + 'fof_subhalo_tab_%03d.%d.hdf5' % (self.snap, chunkNum)
+        filePath1 = self.get_gc_dir(snap) + 'groups_%03d.%d.hdf5' % (snap, chunkNum)
+        filePath2 = self.get_gc_dir(snap) + 'fof_subhalo_tab_%03d.%d.hdf5' % (snap, chunkNum)
 
         if os.path.isfile(filePath1):
             return filePath1
         return filePath2
 
-    def offsetPath(self):
+    def offsetPath(self, snap):
         """ Return absolute path to a separate offset file (modify as needed). """
         if self.hostname == 'tng':
             assert self.sim == 'tng'
             offsetPath = f'{self.get_base_dir()}sims.TNG/TNG{self.box_size}-{self.run}/'
-            offsetPath += f'postprocessing/offsets/offsets_{self.snap:03d}/'
+            offsetPath += f'postprocessing/offsets/offsets_{snap:03d}/'
         else:
             offsetPath = f'{self.get_base_dir()}downloaded/tng/tng{self.box_size}-{self.run}/'
-            offsetPath += f'offsets/offsets_{self.snap:03d}.hdf5'
+            offsetPath += f'offsets/offsets_{snap:03d}.hdf5'
         return offsetPath
 
-    def snapPath(self, chunkNum=0):
+    def snapPath(self, snap, chunkNum=0):
         """ Return absolute path to a snapshot HDF5 file (modify as needed). """
         if self.hostname == 'tng':
             assert self.sim == 'tng'
             snapPath = f'{self.get_base_dir()}sims.TNG/TNG{self.box_size}-{self.run}/'
-            snapPath += f'output/snapdir_{self.snap:03d}/'
+            snapPath += f'output/snapdir_{snap:03d}/'
         else:
             snapPath = f'{self.get_base_dir()}downloaded/tng/tng{self.box_size}-{self.run}/'
-            snapPath += f'snapshot_{self.snap}/'
-        filePath = snapPath + 'snap_' + str(self.snap).zfill(3)
+            snapPath += f'snapshot_{snap}/'
+        filePath = snapPath + 'snap_' + str(snap).zfill(3)
         filePath += '.' + str(chunkNum) + '.hdf5'
         return filePath
 
@@ -147,7 +147,7 @@ class Config:
 
         return nPart
 
-    def loadSubset(self, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
+    def loadSubset(self, snap, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
         """ Load a subset of fields for all particles/cells of a given partType.
             If offset and length specified, load only that subset of the partType.
             If mdi is specified, must be a list of integers of the same length as fields,
@@ -166,7 +166,7 @@ class Config:
             fields = [fields]
 
         # load header from first chunk
-        with h5py.File(self.snapPath(self.snap), 'r') as f:
+        with h5py.File(self.snapPath(snap), 'r') as f:
 
             header = dict(f['Header'].attrs.items())
             nPart = self.getNumPart(header)
@@ -192,7 +192,7 @@ class Config:
             # find a chunk with this particle type
             i = 1
             while gName not in f:
-                f = h5py.File(self.snapPath(i), 'r')
+                f = h5py.File(self.snapPath(snap, i), 'r')
                 i += 1
 
             # if fields not specified, load everything
@@ -224,7 +224,7 @@ class Config:
         origNumToRead = numToRead
 
         while numToRead:
-            f = h5py.File(self.snapPath(fileNum), 'r')
+            f = h5py.File(self.snapPath(snap, fileNum), 'r')
 
             # no particles of requested type in this file chunk?
             if gName not in f:
@@ -269,19 +269,19 @@ class Config:
 
         return result
 
-    def getSnapOffsets(self, id, type):
+    def getSnapOffsets(self, snap, id, type):
         """ Compute offsets within snapshot for a particular group/subgroup. """
         r = {}
 
         # old or new format
-        if 'fof_subhalo' in self.gcPath(self.snap):
+        if 'fof_subhalo' in self.gcPath(snap):
             # use separate 'offsets_nnn.hdf5' files
-            with h5py.File(self.offsetPath(), 'r') as f:
+            with h5py.File(self.offsetPath(snap), 'r') as f:
                 groupFileOffsets = f['FileOffsets/'+type][()]
                 r['snapOffsets'] = np.transpose(f['FileOffsets/SnapByType'][()])  # consistency
         else:
             # load groupcat chunk offsets from header of first file
-            with h5py.File(self.gcPath(self.snap), 'r') as f:
+            with h5py.File(self.gcPath(snap), 'r') as f:
                 groupFileOffsets = f['Header'].attrs['FileOffsets_'+type]
                 r['snapOffsets'] = f['Header'].attrs['FileOffsets_Snap']
 
@@ -291,32 +291,32 @@ class Config:
         groupOffset = groupFileOffsets[fileNum]
 
         # load the length (by type) of this group/subgroup from the group catalog
-        with h5py.File(self.gcPath(fileNum), 'r') as f:
+        with h5py.File(self.gcPath(snap, fileNum), 'r') as f:
             r['lenType'] = f[type][type+'LenType'][groupOffset, :]
 
         # old or new format: load the offset (by type) of this group/subgroup within the snapshot
-        if 'fof_subhalo' in self.gcPath(self.snap):
-            with h5py.File(self.offsetPath(), 'r') as f:
+        if 'fof_subhalo' in self.gcPath(snap):
+            with h5py.File(self.offsetPath(snap), 'r') as f:
                 r['offsetType'] = f[type+'/SnapByType'][id, :]
         else:
-            with h5py.File(self.gcPath(fileNum), 'r') as f:
+            with h5py.File(self.gcPath(snap, fileNum), 'r') as f:
                 r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset, :]
 
         return r
 
-    def loadSubhalo(self, id, partType, fields=None):
+    def loadSubhalo(self, snap, id, partType, fields=None):
         """ Load all particles/cells of one type for a specific subhalo
             (optionally restricted to a subset fields). """
         # load subhalo length, compute offset, call loadSubset
-        subset = self.getSnapOffsets(id, "Subhalo")
-        return self.loadSubset(partType, fields, subset=subset)
+        subset = self.getSnapOffsets(snap, id, "Subhalo")
+        return self.loadSubset(snap, partType, fields, subset=subset)
 
-    def loadHalo(self, id, partType, fields=None):
+    def loadHalo(self, snap, id, partType, fields=None):
         """ Load all particles/cells of one type for a specific halo
             (optionally restricted to a subset fields). """
         # load halo length, compute offset, call loadSubset
-        subset = self.getSnapOffsets(id, "Group")
-        return self.loadSubset(partType, fields, subset=subset)
+        subset = self.getSnapOffsets(snap, id, "Group")
+        return self.loadSubset(snap, partType, fields, subset=subset)
 
     def get_ages(self):
         assert self.sim == 'tng'
@@ -334,3 +334,19 @@ class Config:
                          10.654, 10.834, 11.016, 11.138, 11.323, 11.509, 11.635, 11.824,
                          11.951, 12.143, 12.337, 12.467, 12.663, 12.795, 12.993, 13.127,
                          13.328, 13.463, 13.667, 13.803])
+
+    def get_redshifts(self):
+        assert self.sim == 'tng'
+        return np.array([20.05, 14.99, 11.98, 10.98, 10.0, 9.39, 9.0, 8.45, 8.01,
+                         7.6, 7.24, 7.01, 6.49, 6.01, 5.85, 5.53, 5.23, 5.0, 4.66,
+                         4.43, 4.18, 4.01, 3.71, 3.49, 3.28, 3.01, 2.9, 2.73, 2.58,
+                         2.44, 2.32, 2.21, 2.1, 2.0, 1.9, 1.82, 1.74, 1.67, 1.6, 1.53,
+                         1.5, 1.41, 1.36, 1.3, 1.25, 1.21, 1.15, 1.11, 1.07, 1.04, 1.0,
+                         0.95, 0.92, 0.89, 0.85, 0.82, 0.79, 0.76, 0.73, 0.7, 0.68, 0.64,
+                         0.62, 0.6, 0.58, 0.55, 0.52, 0.5, 0.48, 0.46, 0.44, 0.42, 0.4,
+                         0.38, 0.36, 0.35, 0.33, 0.31, 0.3, 0.27, 0.26, 0.24, 0.23, 0.21,
+                         0.2, 0.18, 0.17, 0.15, 0.14, 0.13, 0.11, 0.1, 0.08, 0.07, 0.06,
+                         0.05, 0.03, 0.02, 0.01, 0.0])
+
+    def get_scale_factors(self):
+        return 1 / (1 + self.get_redshifts())

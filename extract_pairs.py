@@ -12,10 +12,6 @@ h = config.get_hubble_param()
 log(f'Extracting data for {config.name} for snapshot {config.snap}')
 
 lhalotree_dir = config.get_lhalotree_dir()
-with h5py.File(lhalotree_dir+'trees_sf1_099.0.hdf5', 'r') as file:
-    redshifts = np.array(file['/Header/Redshifts'])
-scale_factors = 1 / (1 + redshifts)
-ages = helpers.get_tng_ages()
 
 data = {
     'desc_id': np.array([], dtype='int32'),

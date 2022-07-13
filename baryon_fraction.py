@@ -10,7 +10,6 @@ import helpers
 # At higher z halos that merge have lower mass
 # From this script low mass halos have a lower baryon fraction
 
-# As this script needs a range of snapshots, I set config.snap multiple times
 snaps = [50, 99]
 config = helpers.Config()
 h = config.get_hubble_param()
@@ -23,8 +22,7 @@ mids = (bins[:-1] + bins[1:]) / 2
 n_bins = mids.shape[0]
 fig, ax = plt.subplots(1)
 for snap in snaps:
-    config.snap = snap
-    gc_dir = config.get_gc_dir()
+    gc_dir = config.get_gc_dir(snap)
 
     bh_mass = np.array([], dtype='float32')
     dm_mass = np.array([], dtype='float32')

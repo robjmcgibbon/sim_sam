@@ -8,7 +8,7 @@ import helpers
 
 config = helpers.Config()
 h = config.get_hubble_param()
-gc_dir = config.get_gc_dir()
+gc_dir = config.get_gc_dir(config.snap)
 
 dm_mass = np.array([], dtype='float32')
 stellar_mass = np.array([], dtype='float32')
