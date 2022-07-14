@@ -58,7 +58,7 @@ class Config:
         elif self.hostname == 'cuillin':
             return '/disk01/rmcg/'
         elif self.hostname == 'tng':
-            return '/home/tnguser'
+            return '/home/tnguser/'
 
     def get_generated_data_dir(self):
         data_dir = f'{self.get_base_dir()}generated/sim_sam/{self.name}/'

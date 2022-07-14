@@ -40,7 +40,7 @@ for file_name in os.listdir(lhalotree_dir):
 
             is_valid_desc = (arr_snap_num == config.snap)
             # TODO: Vary dm_mass limit based on simulation?
-            is_valid_desc &= (arr_dm_mass > 10**10)
+            is_valid_desc &= (arr_dm_mass > 1)  # Simulation mass units
             is_valid_desc &= arr_is_central
             # TODO: Check for nonzero stellar and gas mass?
 
