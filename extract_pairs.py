@@ -8,7 +8,6 @@ import helpers
 from helpers import log
 
 config = helpers.Config()
-h = config.get_hubble_param()
 log(f'Extracting data for {config.name} for snapshot {config.snap}')
 
 lhalotree_dir = config.get_lhalotree_dir()
@@ -28,7 +27,7 @@ for file_name in os.listdir(lhalotree_dir):
     with h5py.File(lhalotree_dir+file_name, 'r') as file:
         for tree_name in [key for key in file.keys() if 'Tree' in key]:
             arr_sub_id = np.array(file[tree_name+'/SubhaloNumber'])
-            arr_mass = np.array(file[tree_name+'/SubhaloMassType']) * (10**10) / h
+            arr_mass = np.array(file[tree_name+'/SubhaloMassType'])
             arr_gas_mass = arr_mass[:, 0]
             arr_dm_mass = arr_mass[:, 1]
             arr_stellar_mass = arr_mass[:, 4]
@@ -81,3 +80,5 @@ for file_name in os.listdir(lhalotree_dir):
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'pairs/'
 pd.DataFrame(data).to_parquet(f'{save_data_dir}snap_{config.snap}.parquet', index=False)
+
+log(f'Script finished')
