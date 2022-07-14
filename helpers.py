@@ -94,7 +94,7 @@ class Config:
         if self.hostname == 'tng':
             assert self.sim == 'tng'
             offsetPath = f'{self.get_base_dir()}sims.TNG/TNG{self.box_size}-{self.run}/'
-            offsetPath += f'postprocessing/offsets/offsets_{snap:03d}/'
+            offsetPath += f'postprocessing/offsets/offsets_{snap:03d}.hdf5'
         else:
             offsetPath = f'{self.get_base_dir()}downloaded/tng/tng{self.box_size}-{self.run}/'
             offsetPath += f'offsets/offsets_{snap:03d}.hdf5'

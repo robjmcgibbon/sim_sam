@@ -17,19 +17,19 @@ ages = config.get_ages()
 scale_factors = config.get_scale_factors()
 
 
-def calculate_efficiencies(snap, desc_id, prog_id,
+def calculate_efficiencies(snap, diff_dm_mass, desc_id, prog_id,
                            desc_stellar_mass, prog_stellar_mass):
     
     # Calculations using gas particles
     gas_fields = ['Masses', 'ParticleIDs', 'StarFormationRate']
 
-    prog_g = helpers.loadSubhalo(snap-1, prog_id, 0, fields=gas_fields)
+    prog_g = config.loadSubhalo(snap-1, prog_id, 0, fields=gas_fields)
     prog_is_cold_gas = prog_g['StarFormationRate'] > 0
     prog_is_hot_gas = np.logical_not(prog_is_cold_gas)
     prog_cold_gas_ids = prog_g['ParticleIDs'][prog_is_cold_gas]
     prog_hot_gas_ids = prog_g['ParticleIDs'][prog_is_hot_gas]
     
-    desc_g = helpers.loadSubhalo(snap, desc_id, 0, fields=gas_fields)
+    desc_g = config.loadSubhalo(snap, desc_id, 0, fields=gas_fields)
     desc_is_cold_gas = desc_g['StarFormationRate'] > 0
     desc_is_hot_gas = np.logical_not(desc_is_cold_gas)
     desc_cold_gas_ids = desc_g['ParticleIDs'][desc_is_cold_gas]
@@ -67,13 +67,13 @@ def calculate_efficiencies(snap, desc_id, prog_id,
     hot_gas_mass = np.sum(desc_g['Masses'][desc_is_hot_gas])
      
     # Calculations using star particles
-    stellar_fields = ['GFM_StellarFormationTime', 'Masses', 'ParticleIDs']
+    stellar_fields = ['GFM_InitialMass', 'GFM_StellarFormationTime', 'Masses', 'ParticleIDs']
 
-    prog_s = helpers.loadSubhalo(snap-1, prog_id, 4, fields=stellar_fields)
+    prog_s = config.loadSubhalo(snap-1, prog_id, 4, fields=stellar_fields)
     prog_is_star = prog_s['GFM_StellarFormationTime'] > 0  # Remove wind particles
     assert np.isclose(prog_stellar_mass, np.sum(prog_s['Masses'][prog_is_star]), rtol=1e-5)
 
-    desc_s = helpers.loadSubhalo(snap, desc_id, 4, fields=stellar_fields)
+    desc_s = config.loadSubhalo(snap, desc_id, 4, fields=stellar_fields)
     desc_is_star = desc_s['GFM_StellarFormationTime'] > 0  # Remove wind particles
     assert np.isclose(desc_stellar_mass, np.sum(desc_s['Masses'][desc_is_star]), rtol=1e-5)
 
@@ -110,7 +110,7 @@ for i in range(n_sub):
     
     desc_id = data['desc_id'][i]
     prog_id = data['prog_id'][i]
-    diff_dm_mass = data['diff_dm_mass'][i]
+    diff_dm_mass = max(data['desc_dm_mass'][i] - data['prog_dm_mass'][i], 0)
     desc_stellar_mass = data['desc_stellar_mass'][i]
     prog_stellar_mass = data['prog_stellar_mass'][i]
     try:
