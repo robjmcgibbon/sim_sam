@@ -7,7 +7,7 @@ import numpy as np
 import helpers
 
 config = helpers.Config()
-h = config.get_hubble_param()
+h = config.hubble_param
 gc_dir = config.get_gc_dir(config.snap)
 
 dm_mass = np.array([], dtype='float32')

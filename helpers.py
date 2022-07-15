@@ -40,18 +40,15 @@ class Config:
         else:
             self.hostname = 'tng'
 
-    def get_hubble_param(self):
         if self.sim == 'tng':
-            return 0.6774
-        raise AssertionError
-
-    def get_omega_m(self):
-        if self.sim == 'tng':
-            return 0.3089
-
-    def get_omega_b(self):
-        if self.sim == 'tng':
-            return 0.0486
+            self.hubble_param = 0.6774
+            self.omega_m = 0.3089
+            self.omega_b = 0.0486
+            self.dm_mass_cut = {  # Simulation mass units
+                100: 1,
+            }[self.box_size]
+        else:
+            raise NotImplementedError
 
     def get_base_dir(self):
         if self.hostname == 'local':

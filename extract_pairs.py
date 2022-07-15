@@ -8,7 +8,7 @@ import helpers
 from helpers import log
 
 config = helpers.Config()
-log(f'Extracting data for {config.name} for snapshot {config.snap}')
+log(f'Extracting pairs data for {config.name} for snapshot {config.snap}')
 
 lhalotree_dir = config.get_lhalotree_dir()
 
@@ -39,8 +39,7 @@ for file_name in os.listdir(lhalotree_dir):
                 arr_is_central[i_sub] = (i_sub == i_central)
 
             is_valid_desc = (arr_snap_num == config.snap)
-            # TODO: Vary dm_mass limit based on simulation?
-            is_valid_desc &= (arr_dm_mass > 1)  # Simulation mass units
+            is_valid_desc &= (arr_dm_mass > config.dm_mass_cut)
             is_valid_desc &= arr_is_central
             is_valid_desc &= (arr_gas_mass != 0)
             is_valid_desc &= (arr_stellar_mass != 0)

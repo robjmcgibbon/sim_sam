@@ -12,9 +12,9 @@ import helpers
 
 snaps = [25, 33, 50, 99]
 config = helpers.Config()
-h = config.get_hubble_param()
-omega_m = config.get_omega_m()
-omega_b = config.get_omega_b()
+h = config.hubble_param
+omega_m = config.omega_m
+omega_b = config.omega_b
 
 bin_width = .5
 bins = np.arange(10, 15, bin_width)
