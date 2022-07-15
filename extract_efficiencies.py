@@ -17,7 +17,7 @@ ages = config.get_ages()
 scale_factors = config.get_scale_factors()
 
 
-def calculate_efficiencies(snap, diff_dm_mass, desc_id, prog_id,
+def calculate_efficiencies(snap, desc_id, prog_id, diff_dm_mass,
                            desc_stellar_mass, prog_stellar_mass):
     
     # Calculations using gas particles
@@ -110,9 +110,9 @@ for i in range(n_sub):
     
     desc_id = data['desc_id'][i]
     prog_id = data['prog_id'][i]
-    diff_dm_mass = max(data['desc_dm_mass'][i] - data['prog_dm_mass'][i], 0)
     desc_stellar_mass = data['desc_stellar_mass'][i]
     prog_stellar_mass = data['prog_stellar_mass'][i]
+    diff_dm_mass = max(data['desc_dm_mass'][i] - data['prog_dm_mass'][i], 0)
     f_a, f_c, f_s, f_d, f_m = calculate_efficiencies(
         config.snap, desc_id, prog_id, diff_dm_mass, desc_stellar_mass, prog_stellar_mass
     )

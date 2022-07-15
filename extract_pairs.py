@@ -42,7 +42,8 @@ for file_name in os.listdir(lhalotree_dir):
             # TODO: Vary dm_mass limit based on simulation?
             is_valid_desc &= (arr_dm_mass > 1)  # Simulation mass units
             is_valid_desc &= arr_is_central
-            # TODO: Check for nonzero stellar and gas mass?
+            is_valid_desc &= (arr_gas_mass != 0)
+            is_valid_desc &= (arr_stellar_mass != 0)
 
             desc_id = arr_sub_id[is_valid_desc]
             desc_dm_mass = arr_dm_mass[is_valid_desc]
@@ -59,8 +60,9 @@ for file_name in os.listdir(lhalotree_dir):
                 if (
                         i_prog != -1 and                             # Check progenitor exists
                         arr_snap_num[i_prog] == config.snap - 1 and  # Check snapshot isn't skipped
-                        arr_is_central[i_prog]                       # Require central subhalo
-                        # TODO: Check for nonzero stellar and gas mass?
+                        arr_is_central[i_prog] and                   # Require central subhalo
+                        arr_gas_mass[i_prog] != 0 and                # Require nonzero gas mass
+                        arr_stellar_mass[i_prog] != 0                # Require nonzero stellar mass
                    ):
                     prog_id[i_desc] = arr_sub_id[i_prog]
                     prog_dm_mass[i_desc] = arr_dm_mass[i_prog]
