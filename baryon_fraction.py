@@ -10,7 +10,7 @@ import helpers
 # At higher z halos that merge have lower mass
 # From this script low mass halos have a lower baryon fraction
 
-snaps = [50, 99]
+snaps = [25, 33, 50, 99]
 config = helpers.Config()
 h = config.get_hubble_param()
 omega_m = config.get_omega_m()
@@ -30,12 +30,16 @@ for snap in snaps:
     stellar_mass = np.array([], dtype='float32')
     fof_id = np.array([], dtype='int32')
     central_id = np.array([], dtype='int32')
-    for file_name in sorted(os.listdir(gc_dir)):
-        print(file_name)
+    for i in range(len(os.listdir(gc_dir))):
+        file_name = f'fof_subhalo_tab_{snap:03d}.{i}.hdf5'
+        print(f'Reading {file_name}')
         with h5py.File(gc_dir+file_name) as file:
             z = round(file['Header'].attrs['Redshift'])
 
-            mass = np.array(file['Subhalo/SubhaloMassType']) * (10**10) / h
+            try:
+                mass = np.array(file['Subhalo/SubhaloMassType']) * (10**10) / h
+            except KeyError:
+                continue
             bh_mass = np.concatenate([bh_mass, mass[:, 5]])
             dm_mass = np.concatenate([dm_mass, mass[:, 1]])
             gas_mass = np.concatenate([gas_mass, mass[:, 0]])

@@ -1,0 +1,4 @@
+cd /home/rmcg/sim_sam
+for i in {1..99}; do
+    sbatch general.sbatch extract_pairs.py "$i"
+done

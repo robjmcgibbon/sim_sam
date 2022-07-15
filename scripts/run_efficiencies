@@ -1,0 +1,9 @@
+cd /home/rmcg/sim_sam
+for i in {1..99}; do
+    python extract_efficiencies.py \
+        --sim=tng \
+        --snap="$i" \
+        --run=1  \
+        --box_size=100 \
+        >> /home/tnguser/efficiencies_logs/"$i"
+done

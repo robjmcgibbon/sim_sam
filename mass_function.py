@@ -14,11 +14,16 @@ dm_mass = np.array([], dtype='float32')
 stellar_mass = np.array([], dtype='float32')
 fof_id = np.array([], dtype='int32')
 central_id = np.array([], dtype='int32')
-for file_name in sorted(os.listdir(gc_dir)):
+for i in range(len(os.listdir(gc_dir))):
+    file_name = f'fof_subhalo_tab_{config.snap:03d}.{i}.hdf5'
+    print(f'Reading {file_name}')
     with h5py.File(gc_dir+file_name) as file:
         box_size = file['Header'].attrs['BoxSize'] / (1000 * h)
 
-        mass = np.array(file['Subhalo/SubhaloMassType']) * (10**10) / h
+        try:
+            mass = np.array(file['Subhalo/SubhaloMassType']) * (10**10) / h
+        except KeyError:
+            continue
         dm_mass = np.concatenate([dm_mass, mass[:, 1]])
         stellar_mass = np.concatenate([stellar_mass, mass[:, 4]])
         fof_id = np.concatenate([fof_id, np.array(file['Subhalo/SubhaloGrNr'])])
