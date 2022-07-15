@@ -24,6 +24,7 @@ class Config:
         if unknown:
             log(f'Unknown arguments: {unknown}')
         parser = vars(parser)
+        log(f'Config: {parser}')
 
         self.box_size = parser['box_size']
         self.run = parser['run']
@@ -147,7 +148,7 @@ class Config:
 
         return nPart
 
-    def loadSubset(self, snap, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
+    def loadSubset(self, snapNum, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
         """ Load a subset of fields for all particles/cells of a given partType.
             If offset and length specified, load only that subset of the partType.
             If mdi is specified, must be a list of integers of the same length as fields,
@@ -166,7 +167,7 @@ class Config:
             fields = [fields]
 
         # load header from first chunk
-        with h5py.File(self.snapPath(snap), 'r') as f:
+        with h5py.File(self.snapPath(snapNum), 'r') as f:
 
             header = dict(f['Header'].attrs.items())
             nPart = self.getNumPart(header)
@@ -192,7 +193,7 @@ class Config:
             # find a chunk with this particle type
             i = 1
             while gName not in f:
-                f = h5py.File(self.snapPath(snap, i), 'r')
+                f = h5py.File(self.snapPath(snapNum, i), 'r')
                 i += 1
 
             # if fields not specified, load everything
@@ -224,7 +225,7 @@ class Config:
         origNumToRead = numToRead
 
         while numToRead:
-            f = h5py.File(self.snapPath(snap, fileNum), 'r')
+            f = h5py.File(self.snapPath(snapNum, fileNum), 'r')
 
             # no particles of requested type in this file chunk?
             if gName not in f:
@@ -269,19 +270,19 @@ class Config:
 
         return result
 
-    def getSnapOffsets(self, snap, id, type):
+    def getSnapOffsets(self, snapNum, id, type):
         """ Compute offsets within snapshot for a particular group/subgroup. """
         r = {}
 
         # old or new format
-        if 'fof_subhalo' in self.gcPath(snap):
+        if 'fof_subhalo' in self.gcPath(snapNum):
             # use separate 'offsets_nnn.hdf5' files
-            with h5py.File(self.offsetPath(snap), 'r') as f:
+            with h5py.File(self.offsetPath(snapNum), 'r') as f:
                 groupFileOffsets = f['FileOffsets/'+type][()]
                 r['snapOffsets'] = np.transpose(f['FileOffsets/SnapByType'][()])  # consistency
         else:
             # load groupcat chunk offsets from header of first file
-            with h5py.File(self.gcPath(snap), 'r') as f:
+            with h5py.File(self.gcPath(snapNum), 'r') as f:
                 groupFileOffsets = f['Header'].attrs['FileOffsets_'+type]
                 r['snapOffsets'] = f['Header'].attrs['FileOffsets_Snap']
 
@@ -291,32 +292,32 @@ class Config:
         groupOffset = groupFileOffsets[fileNum]
 
         # load the length (by type) of this group/subgroup from the group catalog
-        with h5py.File(self.gcPath(snap, fileNum), 'r') as f:
+        with h5py.File(self.gcPath(snapNum, fileNum), 'r') as f:
             r['lenType'] = f[type][type+'LenType'][groupOffset, :]
 
         # old or new format: load the offset (by type) of this group/subgroup within the snapshot
-        if 'fof_subhalo' in self.gcPath(snap):
-            with h5py.File(self.offsetPath(snap), 'r') as f:
+        if 'fof_subhalo' in self.gcPath(snapNum):
+            with h5py.File(self.offsetPath(snapNum), 'r') as f:
                 r['offsetType'] = f[type+'/SnapByType'][id, :]
         else:
-            with h5py.File(self.gcPath(snap, fileNum), 'r') as f:
+            with h5py.File(self.gcPath(snapNum, fileNum), 'r') as f:
                 r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset, :]
 
         return r
 
-    def loadSubhalo(self, snap, id, partType, fields=None):
+    def loadSubhalo(self, snapNum, id, partType, fields=None):
         """ Load all particles/cells of one type for a specific subhalo
             (optionally restricted to a subset fields). """
         # load subhalo length, compute offset, call loadSubset
-        subset = self.getSnapOffsets(snap, id, "Subhalo")
-        return self.loadSubset(snap, partType, fields, subset=subset)
+        subset = self.getSnapOffsets(snapNum, id, "Subhalo")
+        return self.loadSubset(snapNum, partType, fields, subset=subset)
 
-    def loadHalo(self, snap, id, partType, fields=None):
+    def loadHalo(self, snapNum, id, partType, fields=None):
         """ Load all particles/cells of one type for a specific halo
             (optionally restricted to a subset fields). """
         # load halo length, compute offset, call loadSubset
-        subset = self.getSnapOffsets(snap, id, "Group")
-        return self.loadSubset(snap, partType, fields, subset=subset)
+        subset = self.getSnapOffsets(snapNum, id, "Group")
+        return self.loadSubset(snapNum, partType, fields, subset=subset)
 
     def get_ages(self):
         assert self.sim == 'tng'

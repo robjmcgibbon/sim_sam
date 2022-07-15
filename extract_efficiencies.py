@@ -113,18 +113,14 @@ for i in range(n_sub):
     diff_dm_mass = max(data['desc_dm_mass'][i] - data['prog_dm_mass'][i], 0)
     desc_stellar_mass = data['desc_stellar_mass'][i]
     prog_stellar_mass = data['prog_stellar_mass'][i]
-    try:
-        f_a, f_c, f_s, f_d, f_m = calculate_efficiencies(
-            config.snap, desc_id, prog_id, diff_dm_mass, desc_stellar_mass, prog_stellar_mass
-        )
-        data['f_a'][i] = f_a
-        data['f_c'][i] = f_c
-        data['f_s'][i] = f_s
-        data['f_d'][i] = f_d
-        data['f_m'][i] = f_m
-    except Exception as e:
-        log(f'Exception for i={i}: {e}')
-
+    f_a, f_c, f_s, f_d, f_m = calculate_efficiencies(
+        config.snap, desc_id, prog_id, diff_dm_mass, desc_stellar_mass, prog_stellar_mass
+    )
+    data['f_a'][i] = f_a
+    data['f_c'][i] = f_c
+    data['f_s'][i] = f_s
+    data['f_d'][i] = f_d
+    data['f_m'][i] = f_m
 
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'efficiences/'

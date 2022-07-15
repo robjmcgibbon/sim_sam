@@ -79,6 +79,8 @@ for file_name in os.listdir(lhalotree_dir):
 
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'pairs/'
+if not os.path.exists(save_data_dir):
+    os.makedirs(save_data_dir)
 pd.DataFrame(data).to_parquet(f'{save_data_dir}snap_{config.snap}.parquet', index=False)
 
 log(f'Script finished')
