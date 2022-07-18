@@ -81,29 +81,37 @@ def calculate_efficiencies(snap, desc_id, prog_id, diff_dm_mass,
     rate_cold_stars = np.sum(desc_s['GFM_InitialMass'][recently_formed])
     rate_cold_stars /= ages[snap] - ages[snap-1]
 
-    rate_accrete_star = 0
+    rate_accrete_stars = 0
     not_accreted_ids = set(np.union1d(desc_s['ParticleIDs'][recently_formed], prog_s['ParticleIDs']))
     for (part_id, mass) in zip(desc_s['ParticleIDs'], desc_s['Masses']):
         if part_id not in not_accreted_ids:
-            rate_accrete_star += mass
-    rate_accrete_star /= ages[snap] - ages[snap-1]
+            rate_accrete_stars += mass
+    rate_accrete_stars /= ages[snap] - ages[snap-1]
     
     # Calculating efficiencies
-    f_a = rate_accrete_hot / diff_dm_mass if diff_dm_mass else -1
-    f_c = rate_hot_cold / hot_gas_mass if hot_gas_mass else -1
-    f_s = rate_cold_stars / cold_gas_mass if cold_gas_mass else -1
-    f_d = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
-    f_m = rate_accrete_star / desc_stellar_mass
+    # f_a = rate_accrete_hot / diff_dm_mass if diff_dm_mass else -1
+    # f_c = rate_hot_cold / hot_gas_mass if hot_gas_mass else -1
+    # f_s = rate_cold_stars / cold_gas_mass if cold_gas_mass else -1
+    # f_d = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
+    # f_m = rate_accrete_star / desc_stellar_mass
 
-    return f_a, f_c, f_s, f_d, f_m
+    # return f_a, f_c, f_s, f_d, f_m
+    return hot_gas_mass, cold_gas_mass, rate_accrete_hot,rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars
 
 
 log(f'Calculating efficiencies')
-data['f_a'] = np.zeros(n_sub, dtype='float32')
-data['f_c'] = np.zeros(n_sub, dtype='float32')
-data['f_s'] = np.zeros(n_sub, dtype='float32')
-data['f_d'] = np.zeros(n_sub, dtype='float32')
-data['f_m'] = np.zeros(n_sub, dtype='float32')
+data['hot_gas_mass'] = np.zeros(n_sub, dtype='float32')
+data['cold_gas_mass'] = np.zeros(n_sub, dtype='float32')
+data['rate_accrete_hot'] = np.zeros(n_sub, dtype='float32')
+data['rate_hot_cold'] = np.zeros(n_sub, dtype='float32')
+data['rate_cold_stars'] = np.zeros(n_sub, dtype='float32')
+data['rate_cold_hot'] = np.zeros(n_sub, dtype='float32')
+data['rate_accrete_stars'] = np.zeros(n_sub, dtype='float32')
+# data['f_a'] = np.zeros(n_sub, dtype='float32')
+# data['f_c'] = np.zeros(n_sub, dtype='float32')
+# data['f_s'] = np.zeros(n_sub, dtype='float32')
+# data['f_d'] = np.zeros(n_sub, dtype='float32')
+# data['f_m'] = np.zeros(n_sub, dtype='float32')
 for i in range(n_sub):
     if not (i+1) % (n_sub // 20):
         log(f'{round(100*(i+1)/n_sub)}% complete')
@@ -113,15 +121,16 @@ for i in range(n_sub):
     desc_stellar_mass = data['desc_stellar_mass'][i]
     prog_stellar_mass = data['prog_stellar_mass'][i]
     diff_dm_mass = max(data['desc_dm_mass'][i] - data['prog_dm_mass'][i], 0)
-    f_a, f_c, f_s, f_d, f_m = calculate_efficiencies(
+    hot_gas_mass, cold_gas_mass, rate_accrete_hot,rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars = calculate_efficiencies(
         config.snap, desc_id, prog_id, diff_dm_mass, desc_stellar_mass, prog_stellar_mass
     )
-    data['f_a'][i] = f_a
-    data['f_c'][i] = f_c
-    data['f_s'][i] = f_s
-    data['f_d'][i] = f_d
-    data['f_m'][i] = f_m
-
+    data['hot_gas_mass'] = hot_gas_mass
+    data['cold_gas_mass'] = cold_gas_mass
+    data['rate_accrete_hot'] = rate_accrete_hot
+    data['rate_hot_cold'] = rate_hot_cold
+    data['rate_cold_stars'] = rate_cold_stars
+    data['rate_cold_hot'] = rate_cold_hot
+    data['rate_accrete_stars'] = rate_accrete_stars
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'efficiences/'
 if not os.path.exists(save_data_dir):

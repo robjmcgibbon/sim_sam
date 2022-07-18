@@ -1,4 +1,4 @@
-cd /home/rmcg/sim_sam
+cd /home/rmcg/sim_sam/scripts
 for i in {1..99}; do
-    sbatch general.sbatch extract_pairs.py "$i"
+    sbatch pairs.sbatch "$i"
 done
