@@ -1,0 +1,5 @@
+# TODO: Change run number and box size
+for i in {1..99}; do
+ firefox "https://data-eu.tng-project.org/lab/user/rob.mcgibbon@ed.ac.uk/files/generated/sim_sam/tng100-3/efficiencies/snap_${i}.parquet"
+done
+

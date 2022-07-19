@@ -1,9 +1,34 @@
+# Source this file to run it
+
+job_limit () {
+    # Test for single positive integer input
+    if (( $# == 1 )) && [[ $1 =~ ^[1-9][0-9]*$ ]]
+    then
+
+        # Check number of running jobs
+        joblist=($(jobs -rp))
+        while (( ${#joblist[*]} >= $1 ))
+        do
+
+            # Wait for any job to finish
+            command='wait '${joblist[0]}
+            for job in ${joblist[@]:1}
+            do
+                command+=' || wait '$job
+            done
+            eval $command
+            joblist=($(jobs -rp))
+        done
+   fi
+}
+
 cd /home/tnguser/sim_sam
 for i in {1..99}; do
     python -u extract_efficiencies.py \
         --sim=tng \
         --snap="$i" \
-        --run=1  \
+        --run=3  \
         --box_size=100 \
         > /home/tnguser/efficiencies_logs/"$i" &
+    job_limit 15
 done

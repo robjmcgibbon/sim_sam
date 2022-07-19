@@ -96,7 +96,7 @@ def calculate_efficiencies(snap, desc_id, prog_id, diff_dm_mass,
     # f_m = rate_accrete_star / desc_stellar_mass
 
     # return f_a, f_c, f_s, f_d, f_m
-    return hot_gas_mass, cold_gas_mass, rate_accrete_hot,rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars
+    return hot_gas_mass, cold_gas_mass, rate_accrete_hot, rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars
 
 
 log(f'Calculating efficiencies')
@@ -113,7 +113,7 @@ data['rate_accrete_stars'] = np.zeros(n_sub, dtype='float32')
 # data['f_d'] = np.zeros(n_sub, dtype='float32')
 # data['f_m'] = np.zeros(n_sub, dtype='float32')
 for i in range(n_sub):
-    if not (i+1) % (n_sub // 20):
+    if (n_sub // 20) and not (i+1) % (n_sub // 20):
         log(f'{round(100*(i+1)/n_sub)}% complete')
     
     desc_id = data['desc_id'][i]
@@ -124,15 +124,15 @@ for i in range(n_sub):
     hot_gas_mass, cold_gas_mass, rate_accrete_hot,rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars = calculate_efficiencies(
         config.snap, desc_id, prog_id, diff_dm_mass, desc_stellar_mass, prog_stellar_mass
     )
-    data['hot_gas_mass'] = hot_gas_mass
-    data['cold_gas_mass'] = cold_gas_mass
-    data['rate_accrete_hot'] = rate_accrete_hot
-    data['rate_hot_cold'] = rate_hot_cold
-    data['rate_cold_stars'] = rate_cold_stars
-    data['rate_cold_hot'] = rate_cold_hot
-    data['rate_accrete_stars'] = rate_accrete_stars
+    data['hot_gas_mass'][i] = hot_gas_mass
+    data['cold_gas_mass'][i] = cold_gas_mass
+    data['rate_accrete_hot'][i] = rate_accrete_hot
+    data['rate_hot_cold'][i] = rate_hot_cold
+    data['rate_cold_stars'][i] = rate_cold_stars
+    data['rate_cold_hot'][i] = rate_cold_hot
+    data['rate_accrete_stars'][i] = rate_accrete_stars
 log(f'Saving data')
-save_data_dir = config.get_generated_data_dir() + 'efficiences/'
+save_data_dir = config.get_generated_data_dir() + 'efficiencies/'
 if not os.path.exists(save_data_dir):
     os.makedirs(save_data_dir)
 pd.DataFrame(data).to_parquet(f'{save_data_dir}snap_{config.snap}.parquet', index=False)
