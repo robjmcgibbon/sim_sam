@@ -21,7 +21,7 @@
 
 ### Meeting - 19/7/22
 
-- Value of $f_c$ seems consitent for me and N11. This is because $f_c$ depends on the cooling time, which depends on the halo mass. Therefore it's a function of cosmology more than subgrid models.
+- Value of $f_c$ seems consitent for me and N12. This is because $f_c$ depends on the cooling time, which depends on the halo mass. Therefore it's a function of cosmology more than subgrid models.
 - $f_s$ is also going to be similar for simulations as a KS law is universally used for star formation in simulations.
 - Mass function of centrals vs satellites shows why it's valid to only consider centrals as long as there is a high enough mass cut.
 - The baryon fraction of halos has an interesting shape. The general increase with mass is due to an increased ability to hold on to the gas. We think the drop is due to BH feedback.

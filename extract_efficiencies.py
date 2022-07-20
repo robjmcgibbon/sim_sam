@@ -135,11 +135,11 @@ for i in range(n_sub):
     data['rate_cold_stars'][i] = efficiencies[4]
     data['rate_cold_hot'][i] = efficiencies[5]
     data['rate_accrete_stars'][i] = efficiencies[6]
-    data['f_a'] = efficiencies[7]
-    data['f_c'] = efficiencies[8]
-    data['f_s'] = efficiencies[9]
-    data['f_d'] = efficiencies[10]
-    data['f_m'] = efficiencies[11]
+    data['f_a'][i] = efficiencies[7]
+    data['f_c'][i] = efficiencies[8]
+    data['f_s'][i] = efficiencies[9]
+    data['f_d'][i] = efficiencies[10]
+    data['f_m'][i] = efficiencies[11]
 
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'efficiencies/'

@@ -360,3 +360,12 @@ class Config:
                 min_dist = dist
                 closest_snap = snap
         return closest_snap
+
+    @staticmethod
+    def get_colors():
+        return {
+            0: 'g',  # Redshift colors taken from N12
+            1: 'r',
+            2: 'b',
+            3: 'k',
+        }
