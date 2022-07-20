@@ -62,8 +62,7 @@ for snap in snaps:
     ax.plot(mids, data, '-', label=f'z={z}')
 
 universal_baryon_fraction = omega_b / (omega_m - omega_b)
-ax.axhline(universal_baryon_fraction, ls='--', color='gray', 
-        label=r'$\frac{\Omega_b}{\Omega_m-\Omega_b}$')
+ax.axhline(universal_baryon_fraction, ls='--', color='gray', label=r'$\frac{\Omega_b}{\Omega_m-\Omega_b}$')
 ax.set_xlabel('$\log_{10}\, M_{DM}$  $[\mathrm{M}_\odot]$')
 ax.set_ylabel('($M_{BH}+M_{Gas}+M_{*}$) / $M_{DM}$')
 ax.legend()

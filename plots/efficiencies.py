@@ -1,6 +1,32 @@
+import os
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+helpers_path = os.path.abspath(sys.path[0]+'/..')
+sys.path.append(helpers_path)
+import helpers
+from helpers import log
+
+snaps = [25, 33, 50, 99]
+config = helpers.Config()
+h = config.hubble_param
+omega_m = config.omega_m
+omega_b = config.omega_b
+
+log(f'Loading data')
+data_dir = config.get_generated_data_dir() + 'efficiencies/'
+data = {}
+for snap in snaps:
+    data[snap] = pd.read_parquet(f'{data_dir}snap_{config.snap}.parquet')
+
+print(data)
+exit()
+if not os.path.exists(save_data_dir):
+    os.makedirs(save_data_dir)
+pd.DataFrame(data).to_parquet(f'{save_data_dir}snap_{config.snap}.parquet', index=False)
 
 z0_data = pd.read_csv('snap_98.csv', index_col=0)
 z1_data = pd.read_csv('snap_49.csv', index_col=0)
