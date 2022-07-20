@@ -348,3 +348,15 @@ class Config:
 
     def get_scale_factors(self):
         return 1 / (1 + self.get_redshifts())
+
+    def get_closest_snapshot_for_age(self, age):
+        assert self.sim == 'tng'
+        min_dist = float('inf')
+        closest_snap = 0
+        for snap in range(100):
+            # Use get, default to -1
+            dist = abs(age - self.get_ages()[snap])
+            if dist < min_dist:
+                min_dist = dist
+                closest_snap = snap
+        return closest_snap

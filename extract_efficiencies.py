@@ -70,6 +70,7 @@ def calculate_efficiencies(snap, desc_id, prog_id, diff_dm_mass,
     stellar_fields = ['GFM_InitialMass', 'GFM_StellarFormationTime', 'Masses', 'ParticleIDs']
 
     prog_s = config.loadSubhalo(snap-1, prog_id, 4, fields=stellar_fields)
+    # TODO: Add wind particle mass to hot gas mass??
     prog_is_star = prog_s['GFM_StellarFormationTime'] > 0  # Remove wind particles
     assert np.isclose(prog_stellar_mass, np.sum(prog_s['Masses'][prog_is_star]), rtol=1e-5)
 

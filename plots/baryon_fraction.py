@@ -1,9 +1,12 @@
 import os
+import sys
 
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 
+helpers_path = os.path.abspath(sys.path[0]+'/..')
+sys.path.append(helpers_path)
 import helpers
 
 # Early results indicate that f_a decreases with z
