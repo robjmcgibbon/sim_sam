@@ -34,6 +34,7 @@ for efficiency, bins in [
     fig, ax = plt.subplots(1, dpi=150)
     for snap in snaps:
         z = round(config.get_redshifts()[snap], 1)
+        # TODO: Set maximum values for efficiencies
 
         mask = np.array(data[snap][efficiency]) != -1
         frac_valid = np.sum(mask) / mask.shape[0]

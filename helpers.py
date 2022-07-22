@@ -45,8 +45,11 @@ class Config:
             self.omega_m = 0.3089
             self.omega_b = 0.0486
             self.dm_mass_cut = {  # Simulation mass units
-                100: 1,
-            }[self.box_size]
+                100: {
+                    1: 1,
+                    3: 100
+                },
+            }[self.box_size][self.run]
         else:
             raise NotImplementedError
 

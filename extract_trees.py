@@ -27,7 +27,6 @@ def extract_trees(filepath):
                             'rate_cold_hot', 'rate_accrete_stars',
                             'f_a', 'f_c', 'f_s', 'f_d', 'f_m']
 
-        min_snap = 2
         max_snap = 99
         n_input, n_snap = len(input_properties), max_snap+1
 
@@ -75,8 +74,6 @@ def extract_trees(filepath):
                 i_prog = i_halo
                 while i_prog != -1:
                     snap_num = arr['snap_num'][i_prog]
-                    if snap_num < min_snap:
-                        break
 
                     histories[i_sub, 0, snap_num] = arr['bh_mass'][i_prog]
                     histories[i_sub, 1, snap_num] = arr['bh_dot'][i_prog]
