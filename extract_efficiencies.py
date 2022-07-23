@@ -17,9 +17,11 @@ ages = config.get_ages()
 scale_factors = config.get_scale_factors()
 
 
-def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stellar_mass, diff_dm_mass):
+def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stellar_mass,
+                           diff_dm_mass, diff_baryon_mass):
 
     rate_accrete_dm = diff_dm_mass / (ages[snap] - ages[snap-1])
+    rate_accrete_baryon = diff_baryon_mass / (ages[snap] - ages[snap-1])
     
     # Calculations using gas particles
     gas_fields = ['Masses', 'ParticleIDs', 'StarFormationRate']
@@ -97,16 +99,21 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
     f_d = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
     f_m = rate_accrete_stars / desc_stellar_mass
 
-    return cold_gas_mass, hot_gas_mass, \
-        rate_accrete_dm, rate_accrete_hot, rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars, \
+    return cold_gas_mass, hot_gas_mass, rate_accrete_dm, rate_accrete_baryon, \
+        rate_accrete_hot, rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars, \
         f_a, f_c, f_s, f_d, f_m
 
 
 log(f'Calculating efficiencies')
 data['diff_dm_mass'] = np.maximum(data['desc_dm_mass'] - data['prog_dm_mass'], 0)
+data['diff_baryon_mass'] = data['desc_gas_mass'] + data['desc_stellar_mass'] + data['desc_bh_mass']
+data['diff_baryon_mass'] -= data['prog_gas_mass'] + data['prog_stellar_mass'] + data['prog_bh_mass']
+data['diff_baryon_mass'] = np.maximum(data['diff_baryon_mass'], 0)
+
 data['cold_gas_mass'] = np.zeros(n_sub, dtype='float32')
 data['hot_gas_mass'] = np.zeros(n_sub, dtype='float32')
 data['rate_accrete_dm'] = np.zeros(n_sub, dtype='float32')
+data['rate_accrete_baryon'] = np.zeros(n_sub, dtype='float32')
 data['rate_accrete_hot'] = np.zeros(n_sub, dtype='float32')
 data['rate_hot_cold'] = np.zeros(n_sub, dtype='float32')
 data['rate_cold_stars'] = np.zeros(n_sub, dtype='float32')
@@ -129,21 +136,23 @@ for i in range(n_sub):
         data['desc_stellar_mass'][i],
         data['prog_stellar_mass'][i],
         data['diff_dm_mass'][i],
+        data['diff_baryon_mass'][i],
     )
 
     data['cold_gas_mass'][i] = efficiencies[0]
     data['hot_gas_mass'][i] = efficiencies[1]
     data['rate_accrete_dm'][i] = efficiencies[2]
-    data['rate_accrete_hot'][i] = efficiencies[3]
-    data['rate_hot_cold'][i] = efficiencies[4]
-    data['rate_cold_stars'][i] = efficiencies[5]
-    data['rate_cold_hot'][i] = efficiencies[6]
-    data['rate_accrete_stars'][i] = efficiencies[7]
-    data['f_a'][i] = efficiencies[8]
-    data['f_c'][i] = efficiencies[9]
-    data['f_s'][i] = efficiencies[10]
-    data['f_d'][i] = efficiencies[11]
-    data['f_m'][i] = efficiencies[12]
+    data['rate_accrete_baryon'][i] = efficiencies[3]
+    data['rate_accrete_hot'][i] = efficiencies[4]
+    data['rate_hot_cold'][i] = efficiencies[5]
+    data['rate_cold_stars'][i] = efficiencies[6]
+    data['rate_cold_hot'][i] = efficiencies[7]
+    data['rate_accrete_stars'][i] = efficiencies[8]
+    data['f_a'][i] = efficiencies[9]
+    data['f_c'][i] = efficiencies[10]
+    data['f_s'][i] = efficiencies[11]
+    data['f_d'][i] = efficiencies[12]
+    data['f_m'][i] = efficiencies[13]
 
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'efficiencies/'
