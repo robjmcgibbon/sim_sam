@@ -21,6 +21,8 @@ data = {
     'prog_gas_mass': np.array([], dtype='float32'),
     'desc_stellar_mass': np.array([], dtype='float32'),
     'prog_stellar_mass': np.array([], dtype='float32'),
+    'desc_bh_mass': np.array([], dtype='float32'),
+    'prog_bh_mass': np.array([], dtype='float32'),
 }
 for file_name in os.listdir(lhalotree_dir):
     log(f'Processing {file_name}')
@@ -31,6 +33,7 @@ for file_name in os.listdir(lhalotree_dir):
             arr_gas_mass = arr_mass[:, 0]
             arr_dm_mass = arr_mass[:, 1]
             arr_stellar_mass = arr_mass[:, 4]
+            arr_bh_mass = arr_mass[:, 5]
             arr_snap_num = np.array(file[tree_name+'/SnapNum'])
             
             arr_central_index = np.array(file[tree_name+'/FirstHaloInFOFGroup'])
@@ -48,11 +51,13 @@ for file_name in os.listdir(lhalotree_dir):
             desc_dm_mass = arr_dm_mass[is_valid_desc]
             desc_gas_mass = arr_gas_mass[is_valid_desc]
             desc_stellar_mass = arr_stellar_mass[is_valid_desc]
+            desc_bh_mass = arr_bh_mass[is_valid_desc]
 
             prog_id = -1 * np.ones(np.sum(is_valid_desc), dtype='int32')
             prog_dm_mass = np.zeros(np.sum(is_valid_desc), dtype='float32')
             prog_gas_mass = np.zeros(np.sum(is_valid_desc), dtype='float32')
             prog_stellar_mass = np.zeros(np.sum(is_valid_desc), dtype='float32')
+            prog_bh_mass = np.zeros(np.sum(is_valid_desc), dtype='float32')
 
             arr_prog_index = np.array(file[tree_name+'/FirstProgenitor'])
             for i_desc, i_prog in enumerate(arr_prog_index[is_valid_desc]):
@@ -66,6 +71,7 @@ for file_name in os.listdir(lhalotree_dir):
                     prog_id[i_desc] = arr_sub_id[i_prog]
                     prog_dm_mass[i_desc] = arr_dm_mass[i_prog]
                     prog_stellar_mass[i_desc] = arr_stellar_mass[i_prog]
+                    prog_bh_mass[i_desc] = arr_bh_mass[i_prog]
 
             has_prog = (prog_id != -1)
 
@@ -77,6 +83,8 @@ for file_name in os.listdir(lhalotree_dir):
             data['prog_gas_mass'] = np.concatenate([data['prog_gas_mass'], prog_gas_mass[has_prog]])
             data['desc_stellar_mass'] = np.concatenate([data['desc_stellar_mass'], desc_stellar_mass[has_prog]])
             data['prog_stellar_mass'] = np.concatenate([data['prog_stellar_mass'], prog_stellar_mass[has_prog]])
+            data['desc_bh_mass'] = np.concatenate([data['desc_bh_mass'], desc_bh_mass[has_prog]])
+            data['prog_bh_mass'] = np.concatenate([data['prog_bh_mass'], prog_bh_mass[has_prog]])
 
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'pairs/'
