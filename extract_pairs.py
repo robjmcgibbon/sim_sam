@@ -70,6 +70,7 @@ for file_name in os.listdir(lhalotree_dir):
                    ):
                     prog_id[i_desc] = arr_sub_id[i_prog]
                     prog_dm_mass[i_desc] = arr_dm_mass[i_prog]
+                    prog_gas_mass[i_desc] = arr_gas_mass[i_prog]
                     prog_stellar_mass[i_desc] = arr_stellar_mass[i_prog]
                     prog_bh_mass[i_desc] = arr_bh_mass[i_prog]
 

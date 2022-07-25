@@ -24,22 +24,29 @@ for snap in snaps:
     d = pd.read_parquet(f'{data_dir}snap_{snap}.parquet')
     data[snap] = {k: np.array(d[k]) for k in d.keys()}
 
-for efficiency, bins in [
-        ('f_a', np.linspace(0, 1, 51)),
-        ('f_c', np.linspace(0, 0.05, 51)),
-        ('f_s', np.linspace(0, 0.5, 51)),
-        ('f_d', np.linspace(0, 10, 51))
+for efficiency, bins, cut in [
+        ('f_a', np.linspace(0, 1, 51), 1),
+        ('f_c', np.linspace(0, 0.5, 51), 1),
+        ('f_s', np.linspace(0, 1, 51), 1),
+        ('f_d', np.linspace(0, 10, 51), float('inf'))
         ]:
     log(f'Efficiency: {efficiency}')
     fig, ax = plt.subplots(1, dpi=150)
     for snap in snaps:
         z = round(config.get_redshifts()[snap], 1)
-        # TODO: Set maximum values for efficiencies
 
-        mask = np.array(data[snap][efficiency]) != -1
+        mask = data[snap][efficiency] != -1
         frac_valid = np.sum(mask) / mask.shape[0]
-        frac_zero = np.sum(data[snap][efficiency][mask] == 0) / mask.shape[0]
-        log(f'z={z}: n_valid={np.sum(mask)}, frac_valid={frac_valid:.3g}, frac_zero={frac_zero:.3g}')
+
+        cut_mask = data[snap][efficiency] > cut
+        frac_valid_above_cut = np.sum(cut_mask) / np.sum(mask)
+        max_value = np.max(data[snap][efficiency])
+        data[snap][efficiency][cut_mask] = cut
+
+        frac_valid_zero = np.sum(data[snap][efficiency] == 0) / np.sum(mask)
+
+        log(f'z={z}: n_valid={np.sum(mask)}, frac_valid={frac_valid:.3g}, frac_valid_zero={frac_valid_zero:.3}',
+            f'cut={cut}, frac_valid_above_cut={frac_valid_above_cut:.3g}, max={max_value}')
 
         mean = np.mean(data[snap][efficiency][mask])
         ax.axvline(mean, linestyle='dashed', color=colors[z])

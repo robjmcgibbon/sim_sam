@@ -371,4 +371,9 @@ class Config:
             1: 'r',
             2: 'b',
             3: 'k',
+            'dm_mass': 'tab:grey',
+            'cold_gas_mass': 'tab:blue',
+            'hot_gas_mass': 'tab:red',
+            'stellar_mass': 'tab:orange',
         }
+
