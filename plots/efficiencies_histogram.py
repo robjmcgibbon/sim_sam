@@ -42,7 +42,8 @@ for efficiency, bins, cut in [
         ('f_c', np.linspace(0, 0.5, 51), 1),
         ('f_s', np.linspace(0, 1, 51), 1),
         ('f_d', np.linspace(0, 10, 51), float('inf')),
-        ('f_m', np.linspace(0, 10, 51), float('inf'))
+        ('f_m', np.linspace(0, 10, 51), float('inf')),
+        ('f_m_id', np.linspace(0, 10, 51), float('inf')),
         ]:
     log(f'Efficiency: {efficiency}')
     fig, ax = plt.subplots(1, dpi=150)

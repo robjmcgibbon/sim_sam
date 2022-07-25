@@ -21,8 +21,8 @@ gc_properties = ['bh_mass', 'bh_dot', 'dm_mass', 'gas_mass',
                  'gas_metallicity', 'sfr', 'stellar_mass', 'stellar_metallicity']
 snap_properties = ['cold_gas_mass', 'hot_gas_mass',
                    'diff_dm_mass', 'rate_accrete_dm', 'rate_accrete_hot', 'rate_accrete_baryon',
-                   'rate_hot_cold', 'rate_cold_stars', 'rate_cold_hot', 'rate_accrete_stars',
-                   'f_a', 'f_a_id', 'f_c', 'f_s', 'f_d', 'f_m']
+                   'rate_hot_cold', 'rate_cold_stars', 'rate_cold_hot', 'rate_accrete_stars', 'rate_merge_stars',
+                   'f_a', 'f_a_id', 'f_c', 'f_s', 'f_d', 'f_m', 'f_m_id']
 
 
 def extract_trees(filepath):

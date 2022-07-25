@@ -17,7 +17,7 @@ ages = config.get_ages()
 scale_factors = config.get_scale_factors()
 
 
-def calculate_efficiencies(snap, desc_id, prog_id, desc_dm_mass, desc_stellar_mass, prog_stellar_mass,
+def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stellar_mass,
                            diff_dm_mass, diff_baryon_mass):
 
     rate_accrete_dm = diff_dm_mass / (ages[snap] - ages[snap-1])
@@ -83,10 +83,11 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_dm_mass, desc_stellar_ma
     assert np.isclose(desc_stellar_mass, np.sum(desc_s['Masses'][desc_is_star]), rtol=1e-5)
 
     recently_formed = desc_s['GFM_StellarFormationTime'] > scale_factors[snap-1]  # This ignores wind particles
+    # TODO: Use inital mass or evolved mass?
     mass_recently_formed = np.sum(desc_s['GFM_InitialMass'][recently_formed])
     rate_cold_stars = mass_recently_formed / (ages[snap] - ages[snap-1])
 
-    # TODO: Add wind particle mass to hot gas mass as stars evolve? Might significantly effect f_d
+    # TODO: Add wind particle mass to hot gas mass as stars evolve? Might significantly affect f_d
 
     rate_accrete_stars = 0
     not_accreted_ids = set(np.union1d(desc_s['ParticleIDs'][recently_formed], prog_s['ParticleIDs']))
@@ -106,8 +107,8 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_dm_mass, desc_stellar_ma
     f_c = rate_hot_cold / prog_hot_gas_mass if prog_hot_gas_mass else -1
     f_s = rate_cold_stars / prog_cold_gas_mass if prog_cold_gas_mass else -1
     f_d = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
-    f_m = rate_merge_stars / desc_dm_mass
-    f_m_id = rate_accrete_stars / desc_dm_mass
+    f_m = rate_merge_stars / rate_accrete_dm if diff_dm_mass else -1
+    f_m_id = rate_accrete_stars / rate_accrete_dm if diff_dm_mass else -1
 
     return desc_cold_gas_mass, desc_hot_gas_mass, rate_accrete_dm, rate_accrete_baryon, \
         rate_accrete_hot, rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars, rate_merge_stars, \
@@ -146,7 +147,6 @@ for i in range(n_sub):
         config.snap,
         data['desc_id'][i],
         data['prog_id'][i],
-        data['desc_dm_mass'][i],
         data['desc_stellar_mass'][i],
         data['prog_stellar_mass'][i],
         data['diff_dm_mass'][i],
