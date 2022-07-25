@@ -48,6 +48,7 @@ def plot_galaxy(i_tree):
     f_a = np.minimum(trees['f_a'][i_tree, :], 1)
     f_c = np.minimum(trees['f_c'][i_tree, :], 1)
     f_s = np.minimum(trees['f_s'][i_tree, :], 1)
+    f_m = trees['f_m'][i_tree, :]
 
     # TODO: Interpolate invalid rates
     i += 1
@@ -56,17 +57,22 @@ def plot_galaxy(i_tree):
         sam_hot_gas_mass[i] = sam_hot_gas_mass[i-1]
         sam_cold_gas_mass[i] = sam_cold_gas_mass[i-1]
         sam_stellar_mass[i] = sam_stellar_mass[i-1]
+        delta_t = ages[i] - ages[i-1]
 
         sam_dm_mass[i] += diff_dm_mass[i]
         sam_hot_gas_mass[i] += f_a[i] * diff_dm_mass[i]
 
         if f_c[i] != -1:
-            sam_hot_gas_mass[i] -= f_c[i] * sam_hot_gas_mass[i-1]
-            sam_cold_gas_mass[i] += f_c[i] * sam_hot_gas_mass[i-1]
+            sam_hot_gas_mass[i] -= f_c[i] * sam_hot_gas_mass[i-1] * delta_t
+            sam_cold_gas_mass[i] += f_c[i] * sam_hot_gas_mass[i-1] * delta_t
 
         if f_s[i] != -1:
-            sam_cold_gas_mass[i] -= f_s[i] * sam_cold_gas_mass[i-1]
-            sam_stellar_mass[i] += f_s[i] * sam_cold_gas_mass[i-1]
+            sam_cold_gas_mass[i] -= f_s[i] * sam_cold_gas_mass[i-1] * delta_t
+            sam_stellar_mass[i] += f_s[i] * sam_cold_gas_mass[i-1] * delta_t
+
+        # TODO: Multiply by diff_dm_mass????
+        if f_m[i] != -1:
+            sam_stellar_mass[i] += f_m[i] * sam_stellar_mass[i-1] * delta_t
 
         # TODO: Set minimum values for properties
         sam_cold_gas_mass[i] = np.maximum(sam_cold_gas_mass[i], 0)
@@ -103,11 +109,8 @@ def plot_galaxy(i_tree):
     plt.close()
 
 
-while j < 1:
-    if trees['dm_mass'][i, 50] != 0:
-        plot_galaxy(i)
-        j += 1
-    i += 1
+for i in range(3):
+    plot_galaxy(i)
 
 
 

@@ -82,14 +82,15 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
     desc_is_star = desc_s['GFM_StellarFormationTime'] > 0  # Remove wind particles
     assert np.isclose(desc_stellar_mass, np.sum(desc_s['Masses'][desc_is_star]), rtol=1e-5)
 
-    recently_formed = desc_s['GFM_StellarFormationTime'] > scale_factors[snap-1]
-    # TODO: Add wind particle mass to hot gas mass as stars evolve? Might significantly effect f_d
+    recently_formed = desc_s['GFM_StellarFormationTime'] > scale_factors[snap-1]  # This ignores wind particles
     rate_cold_stars = np.sum(desc_s['GFM_InitialMass'][recently_formed])
     rate_cold_stars /= ages[snap] - ages[snap-1]
 
+    # TODO: Add wind particle mass to hot gas mass as stars evolve? Might significantly effect f_d
+
     rate_accrete_stars = 0
     not_accreted_ids = set(np.union1d(desc_s['ParticleIDs'][recently_formed], prog_s['ParticleIDs']))
-    for (part_id, mass) in zip(desc_s['ParticleIDs'], desc_s['Masses']):
+    for (part_id, mass) in zip(desc_s['ParticleIDs'][desc_is_star], desc_s['Masses'][desc_is_star]):
         if part_id not in not_accreted_ids:
             rate_accrete_stars += mass
     rate_accrete_stars /= ages[snap] - ages[snap-1]
@@ -100,6 +101,7 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
     f_c = rate_hot_cold / prog_hot_gas_mass if prog_hot_gas_mass else -1
     f_s = rate_cold_stars / prog_cold_gas_mass if prog_cold_gas_mass else -1
     f_d = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
+    # TODO: Should this be normalised by halo mass instead?
     f_m = rate_accrete_stars / prog_stellar_mass
 
     return desc_cold_gas_mass, desc_hot_gas_mass, rate_accrete_dm, rate_accrete_baryon, \

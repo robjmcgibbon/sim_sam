@@ -377,3 +377,17 @@ class Config:
             'stellar_mass': 'tab:orange',
         }
 
+    @staticmethod
+    def get_names():
+        return {
+            'f_a': 'Baryon accretion efficiency',
+            'f_a_id': 'Baryon accretion efficiency (from particle ids)',
+            'f_c': 'Cooling efficiency',
+            'f_s': 'Star formation efficiency',
+            'f_d': 'Feedback efficiency',
+            'f_m': 'Steller accretion efficiency',
+            'dm_mass': 'Dark matter mass',
+            'cold_gas_mass': 'Cold gas mass',
+            'hot_gas_mass': 'Hot gas mass',
+            'stellar_mass': 'Stellar mass',
+        }

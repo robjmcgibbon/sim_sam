@@ -18,6 +18,7 @@ h = config.hubble_param
 omega_m = config.omega_m
 omega_b = config.omega_b
 colors = config.get_colors()
+names = config.get_names()
 
 log(f'Loading data')
 data = {snap: {} for snap in snaps}
@@ -47,7 +48,6 @@ for efficiency, bins, cut in [
     fig, ax = plt.subplots(1, dpi=150)
     for snap in snaps:
         z = round(config.get_redshifts()[snap], 1)
-
         mask = data[snap][efficiency] != -1
         frac_valid = np.sum(mask) / mask.shape[0]
 
@@ -68,44 +68,12 @@ for efficiency, bins, cut in [
                 histtype='step', color=colors[z],
                 density=True, bins=bins)
 
-    ax.set_xlabel(f'${efficiency}$', fontsize=14)
-    ax.legend()
+    ax.set_title(names[efficiency], fontsize=14)
+    ax.set_xlabel(efficiency)
     if 'f_a' in efficiency:
         universal_baryon_fraction = omega_b / (omega_m - omega_b)
         ax.axvline(universal_baryon_fraction, ls='--', color='gray', label=r'$\frac{\Omega_b}{\Omega_m-\Omega_b}$')
-
-    # plt.savefig(f'/home/rmcg/ss_hist_{efficiency}.png')
-    plt.show()
-    plt.close()
-
-bins = np.linspace(11, 14, 10)
-mids = (bins[1:] + bins[:-1]) / 2
-for efficiency in [
-        'f_a',
-        'f_c',
-        'f_s',
-        'f_d',
-        'f_m',
-        ]:
-    fig, ax = plt.subplots(1)
-    for snap in snaps:
-        arr_dm_mass = np.log10(data[snap]['dm_mass']) + 10  # Fixing units
-        vals = np.zeros(mids.shape[0])
-        for i_bin in range(mids.shape[0]):
-            low_lim, upp_lim = bins[i_bin], bins[i_bin+1]
-            mask = arr_dm_mass > low_lim
-            mask &= arr_dm_mass < upp_lim
-            mask &= data[snap][efficiency] != -1
-            vals[i_bin] = np.mean(data[snap][efficiency][mask])
-        mask = vals != 0
-        z = config.get_redshifts()[snap]
-        ax.plot(mids[mask], vals[mask], color=colors[z], label=f'z={z}')
-
-    ax.set_title(efficiency)
-    ax.set_xlabel('Halo mass [$M_\odot$ / h]')
-    if 'f_a' in efficiency:
-        universal_baryon_fraction = omega_b / (omega_m - omega_b)
-        ax.axhline(universal_baryon_fraction, ls='--', color='gray', label=r'$\frac{\Omega_b}{\Omega_m-\Omega_b}$')
     ax.legend()
-    plt.savefig(f'/home/rmcg/ss_{efficiency}_vs_dm_mass.png', dpi=200)
+
+    plt.savefig(f'/home/rmcg/ss_{efficiency}_histogram.png')
     plt.close()
