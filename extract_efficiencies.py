@@ -65,9 +65,11 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
         if part_id in accrete_hot_ids:
             rate_accrete_hot += mass
     rate_accrete_hot /= ages[snap] - ages[snap-1]
-    
-    cold_gas_mass = np.sum(desc_g['Masses'][desc_is_cold_gas])
-    hot_gas_mass = np.sum(desc_g['Masses'][desc_is_hot_gas])
+
+    prog_cold_gas_mass = np.sum(prog_g['Masses'][prog_is_cold_gas])
+    prog_hot_gas_mass = np.sum(prog_g['Masses'][prog_is_hot_gas])
+    desc_cold_gas_mass = np.sum(desc_g['Masses'][desc_is_cold_gas])
+    desc_hot_gas_mass = np.sum(desc_g['Masses'][desc_is_hot_gas])
      
     # Calculations using star particles
     stellar_fields = ['GFM_InitialMass', 'GFM_StellarFormationTime', 'Masses', 'ParticleIDs']
@@ -91,15 +93,15 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
         if part_id not in not_accreted_ids:
             rate_accrete_stars += mass
     rate_accrete_stars /= ages[snap] - ages[snap-1]
-    
+
     # Calculating efficiencies
     f_a = rate_accrete_hot / rate_accrete_dm if diff_dm_mass else -1
-    f_c = rate_hot_cold / hot_gas_mass if hot_gas_mass else -1
-    f_s = rate_cold_stars / cold_gas_mass if cold_gas_mass else -1
+    f_c = rate_hot_cold / prog_hot_gas_mass if prog_hot_gas_mass else -1
+    f_s = rate_cold_stars / prog_cold_gas_mass if prog_cold_gas_mass else -1
     f_d = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
-    f_m = rate_accrete_stars / desc_stellar_mass
+    f_m = rate_accrete_stars / prog_stellar_mass
 
-    return cold_gas_mass, hot_gas_mass, rate_accrete_dm, rate_accrete_baryon, \
+    return desc_cold_gas_mass, desc_hot_gas_mass, rate_accrete_dm, rate_accrete_baryon, \
         rate_accrete_hot, rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars, \
         f_a, f_c, f_s, f_d, f_m
 

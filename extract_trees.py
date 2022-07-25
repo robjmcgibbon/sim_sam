@@ -14,30 +14,29 @@ config = helpers.Config()
 log(f'Extracting tree data for {config.name} for snapshot {config.snap}')
 lhalotree_dir = config.get_lhalotree_dir()
 
+max_snap = 99
+n_snap = max_snap+1
+# TODO: Hot and cold gas metallicity?
+gc_properties = ['bh_mass', 'bh_dot', 'dm_mass', 'gas_mass',
+                 'gas_metallicity', 'sfr', 'stellar_mass', 'stellar_metallicity']
+snap_properties = ['cold_gas_mass', 'hot_gas_mass', 'baryon_mass',
+                   'diff_dm_mass', 'rate_accrete_dm', 'rate_accrete_hot', 'rate_accrete_baryon',
+                   'rate_hot_cold', 'rate_cold_stars', 'rate_cold_hot', 'rate_accrete_stars',
+                   'f_a', 'f_c', 'f_s', 'f_d', 'f_m']
+
 
 def extract_trees(filepath):
     log(f'Starting processing file: {filepath}')
     with h5py.File(filepath, 'r') as file:
         n_halos_in_tree = np.array(file['/Header/TreeNHalos'])
 
-        # TODO: Hot and cold gas metallicity?
-        input_properties = ['bh_mass', 'bh_dot', 'cold_gas_mass', 'dm_mass', 'hot_gas_mass',
-                            'gas_metallicity', 'sfr', 'stellar_mass', 'stellar_metallicity',
-                            'rate_accrete_hot', 'rate_hot_cold', 'rate_cold_stars',
-                            'rate_cold_hot', 'rate_accrete_stars',
-                            'f_a', 'f_c', 'f_s', 'f_d', 'f_m']
+        file_trees = {prop: np.zeros((0, n_snap), dtype='float64') for prop in gc_properties}
+        file_trees['subhalo_id'] = np.zeros((0, n_snap), dtype='int64')
 
-        max_snap = 99
-        n_input, n_snap = len(input_properties), max_snap+1
-
-        # TODO: Save as dict of numpy arrays rather than full array
-        trees = np.zeros((0, n_input, n_snap), dtype='float64')
-        subhalo_ids = np.zeros((0, n_snap), dtype='int64')
         for i_tree, n_halo in enumerate(n_halos_in_tree):
             arr = {}
             tree = file[f'Tree{i_tree}']
 
-            # Convert mass to solar units
             arr_mass_type = np.array(tree['SubhaloMassType'])
             arr['bh_mass'] = np.array(tree['SubhaloBHMass'])
             arr['bh_dot'] = np.array(tree['SubhaloBHMdot'])
@@ -68,32 +67,32 @@ def extract_trees(filepath):
                 continue
 
             i_sub = 0
-            histories = np.zeros((n_valid_sub_this_file, n_input, n_snap), dtype='float64')
-            tree_subhalo_ids = -1 * np.ones((n_valid_sub_this_file, n_snap), dtype='int64')
+            trees = {prop: np.zeros((n_valid_sub_this_file, n_snap), dtype='float64') for prop in gc_properties}
+            trees['subhalo_id'] = -1 * np.ones((n_valid_sub_this_file, n_snap), dtype='int64')
             for i_halo in np.arange(n_halo)[valid]:
                 i_prog = i_halo
-                while i_prog != -1:
+                # Applying same criteria as in extract_pairs
+                while (i_prog != -1 and
+                       arr['dm_mass'][i_prog] > config.dm_mass_cut and
+                       arr['is_central'][i_prog] and
+                       arr['gas_mass'][i_prog] != 0 and
+                       arr['stellar_mass'][i_prog] != 0):
+
                     snap_num = arr['snap_num'][i_prog]
 
-                    histories[i_sub, 0, snap_num] = arr['bh_mass'][i_prog]
-                    histories[i_sub, 1, snap_num] = arr['bh_dot'][i_prog]
-                    histories[i_sub, 3, snap_num] = arr['dm_mass'][i_prog]
-                    # TODO: Remove?
-                    histories[i_sub, 4, snap_num] = arr['gas_mass'][i_prog]
-                    histories[i_sub, 5, snap_num] = arr['gas_metallicity'][i_prog]
-                    histories[i_sub, 6, snap_num] = arr['sfr'][i_prog]
-                    histories[i_sub, 7, snap_num] = arr['stellar_mass'][i_prog]
-                    histories[i_sub, 8, snap_num] = arr['stellar_metallicity'][i_prog]
-
-                    tree_subhalo_ids[i_sub, snap_num] = arr['subhalo_id'][i_prog]
+                    for prop in gc_properties:
+                        trees[prop][i_sub, snap_num] = arr[prop][i_prog]
+                    trees['subhalo_id'][i_sub, snap_num] = arr['subhalo_id'][i_prog]
 
                     i_prog = arr['main_prog_index'][i_prog]
 
                 i_sub += 1
 
-            trees = np.concatenate([trees, histories], axis=0)
-            subhalo_ids = np.concatenate([subhalo_ids, tree_subhalo_ids], axis=0)
-    return trees, subhalo_ids
+            for prop in gc_properties:
+                file_trees[prop] = np.concatenate([file_trees[prop], trees[prop]], axis=0)
+            file_trees['subhalo_id'] = np.concatenate([file_trees['subhalo_id'], trees['subhalo_id']], axis=0)
+
+    return file_trees
 
 
 pool_result = []
@@ -103,73 +102,47 @@ while filenames:
     files_to_process, filenames = filenames[:n_process], filenames[n_process:]
     pool_result += pool.map(extract_trees, files_to_process)
 
-all_trees, all_subhalo_ids = pool_result.pop(0)
-for pool_trees, pool_subhalos_ids in pool_result:
-    all_trees = np.concatenate([all_trees, pool_trees], axis=0)
-    all_subhalo_ids = np.concatenate([all_subhalo_ids, pool_subhalos_ids], axis=0)
+all_trees = pool_result.pop(0)
+for pool_trees in pool_result:
+    for key in all_trees.keys():
+        all_trees[key] = np.concatenate([all_trees[key], pool_trees[key]], axis=0)
+
+for prop in snap_properties:
+    all_trees[prop] = np.zeros((all_trees['subhalo_id'].shape[0], n_snap), dtype='float64')
 
 efficiencies_data_dir = config.get_generated_data_dir() + 'efficiencies/'
 for snap in range(1, 100):
-    log(snap)
+    log(f'Adding efficiencies for snap {snap}')
     efficiencies = pd.read_parquet(f'{efficiencies_data_dir}snap_{snap}.parquet')
 
-    dict_gas_mass = {}
+    arr_efficiencies = {prop: np.array(efficiencies[prop]) for prop in snap_properties}
     arr_desc_id = np.array(efficiencies['desc_id'])
-    arr_cold_gas_mass = np.array(efficiencies['cold_gas_mass'])
-    arr_hot_gas_mass = np.array(efficiencies['hot_gas_mass'])
-    arr_rate_accrete_hot = np.array(efficiencies['rate_accrete_hot'])
-    arr_rate_hot_cold = np.array(efficiencies['rate_hot_cold'])
-    arr_rate_cold_stars = np.array(efficiencies['rate_cold_stars'])
-    arr_rate_cold_hot = np.array(efficiencies['rate_cold_hot'])
-    arr_rate_accrete_stars = np.array(efficiencies['rate_accrete_stars'])
+    arr_stellar_mass = np.array(efficiencies['desc_stellar_mass'])
 
-    arr_desc_dm_mass = np.array(efficiencies['desc_dm_mass'])
-    arr_prog_dm_mass = np.array(efficiencies['prog_dm_mass'])
-    arr_diff_dm_mass = np.maximum(arr_desc_dm_mass - arr_prog_dm_mass, 0)
-    arr_desc_stellar_mass = np.array(efficiencies['desc_stellar_mass'])
-
+    dict_efficiencies = {}
     for i in range(arr_desc_id.shape[0]):
-        sub_id = arr_desc_id[i]
-        dict_gas_mass[sub_id] = (
-            arr_cold_gas_mass[i],
-            arr_hot_gas_mass[i],
-            arr_rate_accrete_hot[i],
-            arr_rate_hot_cold[i],
-            arr_rate_cold_stars[i],
-            arr_rate_cold_hot[i],
-            arr_rate_accrete_stars[i],
-            arr_diff_dm_mass[i],
-            arr_desc_stellar_mass[i],
-            )
+        dict_efficiencies[arr_desc_id[i]] = {prop: arr_efficiencies[prop][i] for prop in snap_properties}
+        dict_efficiencies[arr_desc_id[i]]['desc_stellar_mass'] = arr_stellar_mass[i]
 
-    for i, sub_id in enumerate(all_subhalo_ids[:, snap]):
+    for i, sub_id in enumerate(all_trees['subhalo_id'][:, snap]):
         if sub_id == -1:
             continue
         # TODO: Not sure if setting all to zero is the correct way to deal with skips
-        if sub_id not in dict_gas_mass:
-            all_trees[i, :, snap] = 0
+        if sub_id not in dict_efficiencies:
+            for prop in gc_properties:
+                all_trees[prop][i, snap] = 0
+            all_trees['subhalo_id'][i, snap] = -1
             continue
-        # TODO: Sanity check sum of hot_gas and cold_gas
-        cold_gas_mass, hot_gas_mass, rate_accrete_hot, rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars, diff_dm_mass, desc_stellar_mass = dict_gas_mass[sub_id]
-        all_trees[i, 2, snap] = cold_gas_mass
-        all_trees[i, 4, snap] = hot_gas_mass
-        all_trees[i, 9, snap] = rate_accrete_hot
-        all_trees[i, 10, snap] = rate_hot_cold
-        all_trees[i, 11, snap] = rate_cold_stars
-        all_trees[i, 12, snap] = rate_cold_hot
-        all_trees[i, 13, snap] = rate_accrete_stars
 
-        all_trees[i, 14, snap] = rate_accrete_hot / diff_dm_mass if diff_dm_mass else -1
-        all_trees[i, 15, snap] = rate_hot_cold / hot_gas_mass if hot_gas_mass else -1
-        all_trees[i, 16, snap] = rate_cold_stars / cold_gas_mass if cold_gas_mass else -1
-        all_trees[i, 17, snap] = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
-        all_trees[i, 18, snap] = rate_accrete_stars / desc_stellar_mass
+        assert np.isclose(all_trees['stellar_mass'][i, snap], dict_efficiencies[sub_id]['desc_stellar_mass'])
+        for prop in snap_properties:
+            all_trees[prop][i, snap] = dict_efficiencies[sub_id][prop]
 
 log(f'Saving data')
-save_data_dir = config.get_generated_data_dir()
+save_data_dir = config.get_generated_data_dir() + 'trees/'
 if not os.path.exists(save_data_dir):
     os.makedirs(save_data_dir)
-np.save(f'{save_data_dir}trees.npy', all_trees)
-np.save(f'{save_data_dir}tree_ids.npy', all_subhalo_ids)
+for prop, arr in all_trees.items():
+    np.save(f'{save_data_dir}{prop}.npy', arr)
 
 log(f'Script finished')
