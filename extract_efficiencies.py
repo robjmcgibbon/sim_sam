@@ -75,7 +75,6 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
     stellar_fields = ['GFM_InitialMass', 'GFM_StellarFormationTime', 'Masses', 'ParticleIDs']
 
     prog_s = config.loadSubhalo(snap-1, prog_id, 4, fields=stellar_fields)
-    # TODO: Add wind particle mass to hot gas mass??
     prog_is_star = prog_s['GFM_StellarFormationTime'] > 0  # Remove wind particles
     assert np.isclose(prog_stellar_mass, np.sum(prog_s['Masses'][prog_is_star]), rtol=1e-5)
 
@@ -84,6 +83,7 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
     assert np.isclose(desc_stellar_mass, np.sum(desc_s['Masses'][desc_is_star]), rtol=1e-5)
 
     recently_formed = desc_s['GFM_StellarFormationTime'] > scale_factors[snap-1]
+    # TODO: Add wind particle mass to hot gas mass as stars evolve? Might significantly effect f_d
     rate_cold_stars = np.sum(desc_s['GFM_InitialMass'][recently_formed])
     rate_cold_stars /= ages[snap] - ages[snap-1]
 
@@ -95,7 +95,8 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
     rate_accrete_stars /= ages[snap] - ages[snap-1]
 
     # Calculating efficiencies
-    f_a = rate_accrete_hot / rate_accrete_dm if diff_dm_mass else -1
+    f_a = rate_accrete_baryon / rate_accrete_dm if diff_dm_mass else -1
+    f_a_id = rate_accrete_hot / rate_accrete_dm if diff_dm_mass else -1
     f_c = rate_hot_cold / prog_hot_gas_mass if prog_hot_gas_mass else -1
     f_s = rate_cold_stars / prog_cold_gas_mass if prog_cold_gas_mass else -1
     f_d = rate_cold_hot / rate_cold_stars if rate_cold_stars else -1
@@ -103,7 +104,7 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
 
     return desc_cold_gas_mass, desc_hot_gas_mass, rate_accrete_dm, rate_accrete_baryon, \
         rate_accrete_hot, rate_hot_cold, rate_cold_stars, rate_cold_hot, rate_accrete_stars, \
-        f_a, f_c, f_s, f_d, f_m
+        f_a, f_a_id, f_c, f_s, f_d, f_m
 
 
 log(f'Calculating efficiencies')
@@ -122,6 +123,7 @@ data['rate_cold_stars'] = np.zeros(n_sub, dtype='float32')
 data['rate_cold_hot'] = np.zeros(n_sub, dtype='float32')
 data['rate_accrete_stars'] = np.zeros(n_sub, dtype='float32')
 data['f_a'] = np.zeros(n_sub, dtype='float32')
+data['f_a_id'] = np.zeros(n_sub, dtype='float32')
 data['f_c'] = np.zeros(n_sub, dtype='float32')
 data['f_s'] = np.zeros(n_sub, dtype='float32')
 data['f_d'] = np.zeros(n_sub, dtype='float32')
@@ -151,10 +153,11 @@ for i in range(n_sub):
     data['rate_cold_hot'][i] = efficiencies[7]
     data['rate_accrete_stars'][i] = efficiencies[8]
     data['f_a'][i] = efficiencies[9]
-    data['f_c'][i] = efficiencies[10]
-    data['f_s'][i] = efficiencies[11]
-    data['f_d'][i] = efficiencies[12]
-    data['f_m'][i] = efficiencies[13]
+    data['f_a_id'][i] = efficiencies[10]
+    data['f_c'][i] = efficiencies[11]
+    data['f_s'][i] = efficiencies[12]
+    data['f_d'][i] = efficiencies[13]
+    data['f_m'][i] = efficiencies[14]
 
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'efficiencies/'

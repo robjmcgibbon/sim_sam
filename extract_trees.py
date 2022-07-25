@@ -19,10 +19,10 @@ n_snap = max_snap+1
 # TODO: Hot and cold gas metallicity?
 gc_properties = ['bh_mass', 'bh_dot', 'dm_mass', 'gas_mass',
                  'gas_metallicity', 'sfr', 'stellar_mass', 'stellar_metallicity']
-snap_properties = ['cold_gas_mass', 'hot_gas_mass', 'baryon_mass',
+snap_properties = ['cold_gas_mass', 'hot_gas_mass',
                    'diff_dm_mass', 'rate_accrete_dm', 'rate_accrete_hot', 'rate_accrete_baryon',
                    'rate_hot_cold', 'rate_cold_stars', 'rate_cold_hot', 'rate_accrete_stars',
-                   'f_a', 'f_c', 'f_s', 'f_d', 'f_m']
+                   'f_a', 'f_a_id', 'f_c', 'f_s', 'f_d', 'f_m']
 
 
 def extract_trees(filepath):
@@ -137,6 +137,12 @@ for snap in range(1, 100):
         assert np.isclose(all_trees['stellar_mass'][i, snap], dict_efficiencies[sub_id]['desc_stellar_mass'])
         for prop in snap_properties:
             all_trees[prop][i, snap] = dict_efficiencies[sub_id][prop]
+
+cut_snap = 32
+log(f"Cutting trees that can't be tracked to z={config.get_redshifts()[cut_snap]}")
+mask = all_trees['dm_mass'][:, 32] != 0
+for k in all_trees:
+    all_trees[k] = all_trees[k][mask]
 
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'trees/'
