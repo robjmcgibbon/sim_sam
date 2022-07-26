@@ -34,5 +34,6 @@
 ### Technical notes
 - There is [an issue with pip freeze](https://github.com/conda/conda/issues/11580)
 - Pandas > 1.2 does not work on the fcfs nodes (Illegal Instruction)
+- Julia is a requirement for PySR
 
 

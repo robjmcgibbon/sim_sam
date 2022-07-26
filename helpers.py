@@ -386,6 +386,7 @@ class Config:
             'f_s': 'Star formation efficiency',
             'f_d': 'Feedback efficiency',
             'f_m': 'Steller accretion efficiency',
+            'f_m_id': 'Steller accretion efficiency (from particle ids)',
             'dm_mass': 'Dark matter mass',
             'cold_gas_mass': 'Cold gas mass',
             'hot_gas_mass': 'Hot gas mass',

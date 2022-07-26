@@ -14,6 +14,7 @@
 echo "Job: ${SLURM_JOBID}"
 echo "Hostname: $(hostname)"
 
+module load julia
 cd /home/rmcg/sim_sam
 for script in "$@"; do
     /home/rmcg/miniconda3/envs/sim_sam/bin/python -u $script \

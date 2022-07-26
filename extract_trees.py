@@ -144,6 +144,9 @@ mask = all_trees['dm_mass'][:, 32] != 0
 for k in all_trees:
     all_trees[k] = all_trees[k][mask]
 
+n_trees = np.sum(mask)
+all_trees['z'] = np.tile(config.get_redshifts(), (n_trees, 1))
+
 log(f'Saving data')
 save_data_dir = config.get_generated_data_dir() + 'trees/'
 if not os.path.exists(save_data_dir):
