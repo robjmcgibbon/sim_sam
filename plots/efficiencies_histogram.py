@@ -26,7 +26,7 @@ if use_trees:
     data_dir = config.get_generated_data_dir() + 'trees/'
     trees = {filename.replace('.npy', ''): np.load(data_dir+filename) for filename in os.listdir(data_dir)}
     for snap in snaps:
-        for efficiency in ['f_a', 'f_a_id', 'f_c', 'f_s', 'f_d', 'f_m']:
+        for efficiency in ['f_a', 'f_a_id', 'f_c', 'f_s', 'f_d', 'f_m', 'f_m_id']:
             data[snap][efficiency] = trees[efficiency][:, snap]
         data[snap]['dm_mass'] = trees['dm_mass'][:, snap]
 else:
@@ -42,8 +42,8 @@ for efficiency, bins, cut in [
         ('f_c', np.linspace(0, 0.5, 51), 1),
         ('f_s', np.linspace(0, 1, 51), 1),
         ('f_d', np.linspace(0, 10, 51), float('inf')),
-        ('f_m', np.linspace(0, 10, 51), float('inf')),
-        ('f_m_id', np.linspace(0, 10, 51), float('inf')),
+        ('f_m', np.linspace(0, 0.02, 51), 0.02),
+        ('f_m_id', np.linspace(0, 0.02, 51), 0.02),
         ]:
     log(f'Efficiency: {efficiency}')
     fig, ax = plt.subplots(1, dpi=150)

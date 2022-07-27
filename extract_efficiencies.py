@@ -94,12 +94,14 @@ def calculate_efficiencies(snap, desc_id, prog_id, desc_stellar_mass, prog_stell
     for (part_id, mass) in zip(desc_s['ParticleIDs'][desc_is_star], desc_s['Masses'][desc_is_star]):
         if part_id not in not_accreted_ids:
             rate_accrete_stars += mass
+            # TODO: Check rate_accrete_stars < desc_stellar_mass
     rate_accrete_stars /= ages[snap] - ages[snap-1]
 
     # TODO: This doesn't account for stellar evolution properly
     rate_merge_stars = desc_stellar_mass - (prog_stellar_mass + mass_recently_formed)
     rate_merge_stars /= ages[snap] - ages[snap-1]
     rate_merge_stars = np.maximum(rate_merge_stars, 0)
+    # TODO: Print out rate_merge_stars, rate_accrete_stars
 
     # Calculating efficiencies
     f_a = rate_accrete_baryon / rate_accrete_dm if diff_dm_mass else -1

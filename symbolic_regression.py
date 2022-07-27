@@ -15,10 +15,11 @@ log(f'Creating input and output arrays')
 mask = (trees['dm_mass'] != 0) & (trees['f_a'] != -1)
 z = trees['z'][mask].reshape((-1, 1))
 dm_mass = trees['dm_mass'][mask].reshape((-1, 1))
-f_a = trees['f_a'][mask]
+f_a = trees['f_a'][mask].reshape((-1, 1))
+f_c = trees['f_c'][mask].reshape((-1, 1))
 X = np.concatenate([z, dm_mass], axis=1)
 names = ['z', 'M_h']
-y = f_a
+y = np.concatenate([f_a, f_c], axis=1)
 
 # TODO: Smooth? dataset
 mask = np.random.randint(X.shape[0], size=8000)
