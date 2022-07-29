@@ -23,6 +23,11 @@
 - Pandas > 1.2 does not work on the fcfs nodes (Illegal Instruction)
 - Julia is a requirement for PySR
 
+# Notes
+### gplearn implementation
+Fitness evaluation is defined in _program.py \
+Fitness is defined as raw_fitness - (parsimony_coefficient * len(program))
+
 # Meeting notes
 
 ### 27/07/19

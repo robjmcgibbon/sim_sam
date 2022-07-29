@@ -17,6 +17,7 @@ executing==0.8.3
 fastjsonschema==2.15.3
 fonttools==4.33.3
 fsspec==2022.5.0
+gplearn==0.4.2
 h5py==3.7.0
 ipykernel==6.15.0
 ipython==8.4.0
